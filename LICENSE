@@ -1,0 +1,60 @@
+ApexMQ License
+Project Name: ApexMQ
+Copyright: 2024, Benthara Gamage Kavindu Harshitha
+Contact: kavindu@apexkv.com
+
+License
+This project is licensed under the GNU Affero General Public License (AGPL) version 3.0. Below is a simplified summary of what this license means:
+
+Freedom to Use:
+
+You are free to use this software for both commercial and personal purposes.
+Freedom to Modify:
+
+You can modify and adapt this software to your needs.
+Freedom to Share:
+
+You can share the original or modified versions of this software, but any modifications must be shared under the same AGPL-3.0 license.
+Requirement to Share Changes:
+
+If you modify this software and make it available over a network (like a web service), you must also make the source code available to others under the same license.
+No Warranty:
+
+This software is provided "as is," without warranty of any kind, either express or implied.
+For full legal details, you can review the complete AGPL-3.0 License at https://www.gnu.org/licenses/agpl-3.0.en.html.
+
+Contributor License Agreement (CLA)
+Contribution Guidelines
+
+By contributing to ApexMQ, you agree to the following terms:
+
+Original Work:
+You confirm that your contribution is your own work, and that you have the right to submit it to the project.
+
+Assigning Rights:
+By submitting your code, you grant Benthara Gamage Kavindu Harshitha the right to use, distribute, and modify your contribution as part of the project, under the AGPL-3.0 license.
+
+Clean Submission:
+Your code should be clean and follow the repository’s standards. It should be submitted via Pull Requests (PRs) to the contributors branch or the relevant feature branch after discussion and approval of the feature request.
+
+Feature Requests:
+If you wish to propose a new feature, open an issue for discussion. Once the feature is approved, a specific branch will be created for you to submit your code.
+
+Review Process:
+All contributions will be reviewed. You must follow the project’s contribution workflow (fork the repository, create PRs, etc.).
+
+Attribution:
+
+Contributions will be attributed to the author, but ownership of the project remains with Benthara Gamage Kavindu Harshitha.
+
+How to Contribute
+
+Fork the repository on GitHub.
+Create a new branch for your feature or bug fix.
+Submit a Pull Request (PR) to the relevant branch, following the contribution guidelines above.
+Your contribution will be reviewed and merged if it meets the project standards.
+
+Disclaimer
+This project is provided "as is," with no warranties or guarantees. By using or contributing to this software, you agree that Benthara Gamage Kavindu Harshitha is not liable for any damages or issues that arise from using the software.
+
+This license ensures that the project remains open-source, but any modifications or network-based uses of the software must also be shared under the same terms. Contributions are welcome and encouraged, but the project ownership remains with Benthara Gamage Kavindu Harshitha.
