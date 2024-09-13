@@ -16,10 +16,10 @@ class ApexMQQueManager:
 class ApexMQChannelManager:
     _channel_list = {}
 
-    def __init__(self, connection, channel_name):
+    def __init__(self, connection: pika.BlockingConnection, channel_name):
         self.connection = connection
         self.channel_name = channel_name
-        self.channel = None
+        self.channel = connection.channel()
 
 
 class ApexMQConnectionManager:
@@ -29,7 +29,7 @@ class ApexMQConnectionManager:
         self.connection_name = connection_name
         self.connection_params = get_connection_params(connection_name)
         self.connection: pika.BlockingConnection = None
-        self.channel_list = {}
+        self.channel_list: Dict[str, ApexMQChannelManager] = {}
 
     def connect(self):
         """
@@ -53,3 +53,17 @@ class ApexMQConnectionManager:
         self._connection_list[self.connection_name] = self.connection
 
         return self.connection
+
+    def create_channel(self, channel_name):
+        """
+        Create a new channel with the given name and add it to the channel list.
+
+        Args:
+            channel_name (str): The name of the channel to create.
+
+        Returns:
+            ApexMQChannelManager: A new channel manager instance.
+        """
+        new_channel = ApexMQChannelManager(self.connection, channel_name)
+        self.channel_list[channel_name] = new_channel
+        return new_channel
