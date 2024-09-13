@@ -1,4 +1,3 @@
-# conf.py
 from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
@@ -30,7 +29,7 @@ def get_apexmq_settings() -> dict:
     return user_settings
 
 
-def get_connection_params(name="default") -> dict:
+def get_connection_params(name) -> dict:
     """
     Retrieve the apexmq connection parameters for the specified connection name.
     """
@@ -43,18 +42,3 @@ def get_connection_params(name="default") -> dict:
         )
 
     return connections[name]
-
-
-def get_queue_settings(queue_name) -> dict:
-    """
-    Retrieve the queue settings for a given queue name.
-    """
-    settings = get_apexmq_settings()
-    queues = settings.get("queues", {})
-
-    if queue_name not in queues:
-        raise ImproperlyConfigured(
-            f"Queue '{queue_name}' is not defined in APEXMQ_SETTINGS."
-        )
-
-    return queues[queue_name]
