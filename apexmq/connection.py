@@ -1,4 +1,5 @@
 import pika
+from typing import Dict
 from django.conf import settings
 from .conf import get_connection_params
 
@@ -22,10 +23,33 @@ class ApexMQChannelManager:
 
 
 class ApexMQConnectionManager:
-    _connection_list = {}
+    _connection_list: Dict[str, pika.BlockingConnection] = {}
 
     def __init__(self, connection_name):
         self.connection_name = connection_name
         self.connection_params = get_connection_params(connection_name)
-        self.connection = None
+        self.connection: pika.BlockingConnection = None
         self.channel_list = {}
+
+    def connect(self):
+        """
+        Establish a connection.
+        """
+        credentialis = pika.PlainCredentials(
+            username=self.connection_params["USER"],
+            password=self.connection_params["PASSWORD"],
+        )
+        try:
+            connection_params = pika.ConnectionParameters(
+                host=self.connection_params.get("HOST", "localhost"),
+                port=self.connection_params.get("PORT", 5672),
+                virtual_host=self.connection_params.get("VIRTUAL_HOST", "/"),
+                credentials=credentialis,
+            )
+            self.connection = pika.BlockingConnection(connection_params)
+        except Exception as e:
+            raise ConnectionError(f"Failed to connect to messege que server: {e}")
+
+        self._connection_list[self.connection_name] = self.connection
+
+        return self.connection
