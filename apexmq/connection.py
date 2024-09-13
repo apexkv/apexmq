@@ -1,3 +1,4 @@
+import threading
 import pika
 from typing import Dict
 from django.conf import settings
