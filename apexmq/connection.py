@@ -30,6 +30,11 @@ class ApexMQQueueManager:
         self.queue = channel.queue_declare(queue=queue_name)
         self._queue_list[self.queue_name] = self
 
+    def basic_consume(self, callback):
+        self.channel.basic_consume(
+            queue=self.queue_name, on_message_callback=callback, auto_ack=True
+        )
+
 
 class ApexMQChannelManager:
     """
