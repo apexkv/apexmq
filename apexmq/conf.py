@@ -34,7 +34,7 @@ def get_connection_params(connection_name) -> dict:
 
     connection_settings = settings[connection_name]
 
-    if "user" not in connection_settings or "password" not in connection_settings:
+    if "USER" not in connection_settings or "PASSWORD" not in connection_settings:
         raise ImproperlyConfigured(
             f"Server logging data has not defined in '{connection_name}' configurations."
         )
