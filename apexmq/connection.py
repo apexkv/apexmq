@@ -1,11 +1,13 @@
 import pika
 from typing import Dict
 from django.conf import settings
-from .conf import get_connection_params
 from pika.adapters.blocking_connection import BlockingChannel
+from django.core.exceptions import ImproperlyConfigured
+
+from .conf import get_connection_params
 
 
-class ApexMQQueManager:
+class ApexMQQueueManager:
     """
     Manages individual queues within a channel.
 
@@ -13,19 +15,19 @@ class ApexMQQueManager:
     within a specific channel. It provides a way to interact with a single queue.
 
     Attributes:
-        _que_list (Dict[str, 'ApexMQQueManager']): A class-level dictionary to store all queue instances.
+        _queue_list (Dict[str, 'ApexMQQueueManager']): A class-level dictionary to store all queue instances.
         channel (BlockingChannel): The channel associated with this queue.
-        que_name (str): The name of the queue.
-        que: The queue object returned by pika's queue_declare method.
+        queue_name (str): The name of the queue.
+        queue: The queue object returned by pika's queue_declare method.
     """
 
-    _que_list: Dict[str, "ApexMQQueManager"] = {}
+    _queue_list: Dict[str, "ApexMQQueueManager"] = {}
 
-    def __init__(self, channel: BlockingChannel, que_name):
+    def __init__(self, channel: BlockingChannel, queue_name):
         self.channel = channel
-        self.que_name = que_name
-        self.que = channel.queue_declare(queue=que_name)
-        self._que_list[self.que_name] = self
+        self.queue_name = queue_name
+        self.queue = channel.queue_declare(queue=queue_name)
+        self._queue_list[self.queue_name] = self
 
 
 class ApexMQChannelManager:
@@ -40,7 +42,7 @@ class ApexMQChannelManager:
         connection (pika.BlockingConnection): The connection associated with this channel.
         channel_name (str): The name of the channel.
         channel: The channel object created from the connection.
-        que_list (Dict[str, ApexMQQueManager]): A dictionary to store queues associated with this channel.
+        queue_list (Dict[str, ApexMQQueueManager]): A dictionary to store queues associated with this channel.
     """
 
     _channel_list: Dict[str, "ApexMQChannelManager"] = {}
@@ -49,25 +51,58 @@ class ApexMQChannelManager:
         self.connection = connection
         self.channel_name = channel_name
         self.channel = connection.channel()
-        self.que_list: Dict[str, ApexMQQueManager] = {}
+        self.queue_list: Dict[str, ApexMQQueueManager] = {}
         self._channel_list[self.channel_name] = self
 
-    def create_que(self, que_name):
+    def create_queue(self, queue_name):
         """
         Create a new queue with the given name and add it to the queue list.
 
-        This method creates a new ApexMQQueManager instance, which in turn
+        This method creates a new ApexMQQueueManager instance, which in turn
         declares a new queue on the RabbitMQ server.
 
         Args:
-            que_name (str): The name of the queue to create.
+            queue_name (str): The name of the queue to create.
 
         Returns:
-            ApexMQQueManager: A new queue manager instance.
+            ApexMQQueueManager: A new queue manager instance.
         """
-        new_que = ApexMQQueManager(self.channel, que_name)
-        self.que_list[que_name] = new_que
-        return new_que
+        new_queue = ApexMQQueueManager(self.channel, queue_name)
+        self.queue_list[queue_name] = new_queue
+        return new_queue
+
+    def create_all_queues(self, channel_data: dict):
+        """
+        Create all queues specified in the channel configuration.
+
+        This method reads the queue configuration from the channel_data and creates
+        all specified queues for the current channel.
+
+        Args:
+            channel_data (dict): A dictionary containing the channel configuration,
+                                 including a 'QUEUES' key with queue definitions.
+
+        Returns:
+            Dict[str, ApexMQQueueManager]: A dictionary of created queue managers,
+                                           with keys formatted as '{channel_name}-{queue_name}'.
+
+        Raises:
+            ImproperlyConfigured: If no queues are defined in the channel configuration.
+        """
+        if "QUEUES" not in channel_data:
+            raise ImproperlyConfigured(
+                f"You need to declare 1 or more queue in QUEUES section in channel '{self.channel_name}' because you have declared the channel."
+            )
+
+        queue_list = dict(channel_data["QUEUES"])
+        new_queue_list = {}
+
+        for queue_name, queue_params in queue_list.items():
+            new_queue_list[f"{self.channel_name}-{queue_name}"] = self.create_queue(
+                queue_name
+            )
+
+        return new_queue_list
 
 
 class ApexMQConnectionManager:
@@ -92,6 +127,7 @@ class ApexMQConnectionManager:
         self.connection_params = get_connection_params(connection_name)
         self.connection: pika.BlockingConnection = None
         self.channel_list: Dict[str, ApexMQChannelManager] = {}
+        self.queue_list: Dict[str, ApexMQQueueManager] = {}
 
     def connect(self):
         """
@@ -119,7 +155,7 @@ class ApexMQConnectionManager:
             )
             self.connection = pika.BlockingConnection(connection_params)
         except Exception as e:
-            raise ConnectionError(f"Failed to connect to messege que server: {e}")
+            raise ConnectionError(f"Failed to connect to messege queue server: {e}")
 
         self._connection_list[self.connection_name] = self
 
@@ -138,3 +174,39 @@ class ApexMQConnectionManager:
         new_channel = ApexMQChannelManager(self.connection, channel_name)
         self.channel_list[channel_name] = new_channel
         return new_channel
+
+    def create_all_channels_and_queues(self):
+        """
+        Create all channels and queues specified in the connection configuration.
+
+        This method reads the connection configuration and creates all specified
+        channels and their associated queues. If no channels are specified, it
+        creates a default channel with a default queue.
+
+        The method populates the channel_list and queue_list attributes of the
+        connection manager.
+
+        Returns:
+            None
+
+        Raises:
+            ImproperlyConfigured: If CHANNELS is declared but empty in the connection configuration.
+        """
+        if "CHANNELS" not in self.connection_params:
+            new_channel = self.create_channel("default")
+            DEFAULT_QUEUE_NAME = str(settings.ROOT_URLCONF).split(".")[0]
+            new_queue = new_channel.create_queue(DEFAULT_QUEUE_NAME)
+            self.queue_list[f"{new_channel.channel_name}-{DEFAULT_QUEUE_NAME}"] = (
+                new_queue
+            )
+        else:
+            channels_list = self.connection_params["CHANNELS"]
+            if len(channels_list) == 0:
+                raise ImproperlyConfigured(
+                    f"If you declare CHANNELS in your '{self.connection_name}' connection you have to declare channels and QUEUES configurations. At least channels list and queue names in that channel."
+                )
+            else:
+                for channel_name, channel_data in dict(channels_list).items():
+                    new_channel = self.create_channel(channel_name)
+                    new_queue_list = new_channel.create_all_queues(channel_data)
+                    self.queue_list.update(new_queue_list)
