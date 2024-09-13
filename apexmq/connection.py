@@ -2,6 +2,7 @@ import pika
 from typing import Dict
 from django.conf import settings
 from pika.adapters.blocking_connection import BlockingChannel
+from pika.exceptions import AMQPConnectionError
 from django.core.exceptions import ImproperlyConfigured
 
 from .conf import get_connection_params
@@ -154,7 +155,7 @@ class ApexMQConnectionManager:
                 credentials=credentialis,
             )
             self.connection = pika.BlockingConnection(connection_params)
-        except Exception as e:
+        except AMQPConnectionError as e:
             raise ConnectionError(f"Failed to connect to messege queue server: {e}")
 
         self._connection_list[self.connection_name] = self
