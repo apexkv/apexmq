@@ -157,7 +157,7 @@ class ApexMQChannelManager:
         print(f"Stopping channel {self.channel_name}.")
         self._stop_event.set()
 
-    def run(self):
+    def start(self):
         """
         Start the channel thread, consuming messages from its queues.
         This method is called when the thread starts and continuously
@@ -237,9 +237,9 @@ class ApexMQConnectionManager:
 
         return self.connection
 
-    def create_channel(self, channel_name):
+    def create_channel(self, channel_name: str) -> ApexMQChannelManager:
         """
-        Create a new channel with the given name and add it to the channel list.
+        Creates a new channel manager in a separate thread.
 
         Args:
             channel_name (str): The name of the channel to create.
@@ -247,9 +247,23 @@ class ApexMQConnectionManager:
         Returns:
             ApexMQChannelManager: A new channel manager instance.
         """
-        new_channel = ApexMQChannelManager(self.connection, channel_name)
-        self.channel_list[channel_name] = new_channel
-        return new_channel
+        if not self.connection:
+            raise Exception("Connection not established. Call create_connection first.")
+
+        # Create a new channel manager thread for each channel
+        channel_manager = ApexMQChannelManager(self.connection, channel_name)
+        channel_manager.start()  # This starts the thread that handles the channel
+
+        print(f"Channel {channel_name} created and started.")
+        return channel_manager
+
+    def close_connection(self):
+        """
+        Closes the RabbitMQ connection.
+        """
+        if self.connection:
+            self.connection.close()
+            print("RabbitMQ connection closed")
 
     def create_all_channels_and_queues(self):
         """
