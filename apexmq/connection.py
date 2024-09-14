@@ -23,18 +23,55 @@ class ApexMQQueueManager:
         queue: The queue object returned by pika's queue_declare method.
     """
 
-    _queue_list: Dict[str, "ApexMQQueueManager"] = {}
-
     def __init__(self, channel: BlockingChannel, queue_name):
+        """
+        Initializes the queue manager, declaring the queue on the provided channel.
+
+        Args:
+            channel (BlockingChannel): The RabbitMQ channel.
+            queue_name (str): The name of the queue.
+        """
         self.channel = channel
         self.queue_name = queue_name
-        self.queue = channel.queue_declare(queue=queue_name)
-        self._queue_list[self.queue_name] = self
+        self.declare_queue()
 
-    def basic_consume(self, callback):
+    def declare_queue(self):
+        """
+        Declares a queue in RabbitMQ using the associated channel.
+        """
+        self.channel.queue_declare(queue=self.queue_name)
+
+    def start_consuming(self, callback):
+        """
+        Starts consuming messages from the queue.
+
+        Args:
+            callback (function): A callback function to process messages.
+        """
         self.channel.basic_consume(
             queue=self.queue_name, on_message_callback=callback, auto_ack=True
         )
+        print(f"Started consuming from queue: {self.queue_name}")
+
+    def publish_message(self, message_body: str, routing_key: str = ""):
+        """
+        Publishes a message to the queue.
+
+        Args:
+            message_body (str): The message content to publish.
+            routing_key (str): Optional routing key. Default is an empty string.
+        """
+        self.channel.basic_publish(
+            exchange="", routing_key=self.queue_name, body=message_body
+        )
+        print(f"Message published to queue {self.queue_name}: {message_body}")
+
+    def stop_consuming(self):
+        """
+        Stops consuming messages from the queue.
+        """
+        self.channel.stop_consuming()
+        print(f"Stopped consuming from queue: {self.queue_name}")
 
 
 class ApexMQChannelManager:
