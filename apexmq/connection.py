@@ -55,11 +55,13 @@ class ApexMQChannelManager:
     _channel_list: Dict[str, "ApexMQChannelManager"] = {}
 
     def __init__(self, connection: pika.BlockingConnection, channel_name):
+        threading.Thread.__init__(self)
         self.connection = connection
         self.channel_name = channel_name
         self.channel = connection.channel()
         self.queue_list: Dict[str, ApexMQQueueManager] = {}
         self._channel_list[self.channel_name] = self
+        self._stop_event = threading.Event()
 
     def create_queue(self, queue_name):
         """
@@ -110,6 +112,36 @@ class ApexMQChannelManager:
             )
 
         return new_queue_list
+
+    def stop(self):
+        """
+        Stop the channel thread by setting the stop event and closing the connection.
+        """
+        print(f"Stopping channel {self.channel_name}.")
+        self._stop_event.set()
+
+    def run(self):
+        """
+        Start the channel thread, consuming messages from its queues.
+        This method is called when the thread starts and continuously
+        consumes messages until the stop event is set.
+        """
+        print(f"Channel {self.channel_name} started.")
+        try:
+            while not self._stop_event.is_set():
+                self.connection.process_data_events(time_limit=1)
+        except Exception as e:
+            print(f"Error in Channel {self.channel_name}: {e}")
+        finally:
+            self.close()
+
+    def close(self):
+        """
+        Close the channel and clean up.
+        """
+        if self.channel:
+            self.channel.close()
+        print(f"Channel {self.channel_name} closed.")
 
 
 class ApexMQConnectionManager:
