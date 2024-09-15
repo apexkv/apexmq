@@ -135,7 +135,7 @@ class ApexMQConnectionManager:
 
     def close_connection(self):
         """
-        Closes the RabbitMQ connection.
+        Closes the connection to RabbitMQ.
         """
         if self.connection:
             self.connection.close()
