@@ -89,16 +89,13 @@ class ApexMQConnectionManager:
 
     def connect(self):
         """
-        Establish a connection to the RabbitMQ server.
-
-        This method uses the connection parameters to create a new BlockingConnection
-        to the RabbitMQ server. If the connection fails, it raises a ConnectionError.
+        Establishes a connection to RabbitMQ.
 
         Returns:
-            pika.BlockingConnection: The established connection object.
+            pika.BlockingConnection: The established connection instance.
 
         Raises:
-            ConnectionError: If the connection to the RabbitMQ server fails.
+            ConnectionError: If unable to connect to RabbitMQ.
         """
         credentialis = pika.PlainCredentials(
             username=self.connection_params["USER"],
@@ -114,8 +111,6 @@ class ApexMQConnectionManager:
             self.connection = pika.BlockingConnection(connection_params)
         except AMQPConnectionError as e:
             raise ConnectionError(f"Failed to connect to messege queue server: {e}")
-
-        self._connection_list[self.connection_name] = self
 
         return self.connection
 
