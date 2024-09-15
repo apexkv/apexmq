@@ -1,11 +1,11 @@
 import threading
 from django.apps import AppConfig
 from django.core.exceptions import ImproperlyConfigured
+from django.utils.autoreload import autoreload_started
 
 from .conf import get_apexmq_settings
 from .connection import (
     ApexMQConnectionManager,
-    ApexMQChannelManager,
     ApexMQQueueManager,
 )
 
@@ -16,6 +16,13 @@ class ApexMQConfig(AppConfig):
 
     def ready(self):
         pass
+
+    def watch_for_changes(self):
+        """
+        Connects the `setup_rabbitmq` method to the `autoreload_started` signal.
+        This method will be called whenever Django detects a code change.
+        """
+        autoreload_started.connect(self.setup_rabbitmq)
 
     def setup_rabbitmq(self, sender, **kwargs):
         """
