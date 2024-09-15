@@ -15,7 +15,18 @@ class ApexMQConfig(AppConfig):
     label = "apexmq"
 
     def ready(self):
-        pass
+        """
+        Called when Django starts. If in DEBUG mode, sets up the autoreload
+        listener to monitor code changes and reconfigure RabbitMQ connections.
+        """
+        from django.conf import settings
+
+        if settings.DEBUG:
+            # Set up autoreload for development
+            self.watch_for_changes()
+        else:
+            # Set up RabbitMQ connections directly for production
+            self.setup_rabbitmq()
 
     def watch_for_changes(self):
         """
