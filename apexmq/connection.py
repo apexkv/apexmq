@@ -116,22 +116,21 @@ class ApexMQConnectionManager:
 
     def create_channel(self, channel_name: str) -> ApexMQChannelManager:
         """
-        Creates a new channel manager in a separate thread.
+        Creates and returns a channel manager for the specified channel name.
 
         Args:
             channel_name (str): The name of the channel to create.
 
         Returns:
-            ApexMQChannelManager: A new channel manager instance.
+            ApexMQChannelManager: The created channel manager.
+
+        Raises:
+            Exception: If the connection is not established.
         """
         if not self.connection:
             raise Exception("Connection not established. Call create_connection first.")
 
-        # Create a new channel manager thread for each channel
         channel_manager = ApexMQChannelManager(self.connection, channel_name)
-        channel_manager.start()  # This starts the thread that handles the channel
-
-        print(f"Channel {channel_name} created and started.")
         return channel_manager
 
     def close_connection(self):
