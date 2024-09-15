@@ -38,26 +38,27 @@ class ApexMQQueueManager:
 
 class ApexMQChannelManager:
     """
-    Manages a specific channel in RabbitMQ.
+    Manages the connection to RabbitMQ.
 
     Attributes:
+        connection_name (str): The name of the connection configuration.
+        connection_params (dict): Parameters used to establish the connection.
         connection (pika.BlockingConnection): The connection to RabbitMQ.
-        channel_name (str): The name of the channel.
-        channel (BlockingChannel): The created channel instance.
-        queue_list (Dict[str, ApexMQQueueManager]): A dictionary to keep track of all queues in this channel.
+        channel_list (Dict[str, ApexMQChannelManager]): A dictionary to keep track of all channels in this connection.
+        queue_list (Dict[str, ApexMQQueueManager]): A dictionary to keep track of all queues across channels.
     """
 
-    def __init__(self, connection: pika.BlockingConnection, channel_name):
+    def __init__(self, connection_name):
         """
-        Initializes the ApexMQChannelManager.
+        Initializes the ApexMQConnectionManager.
 
         Args:
-            connection (pika.BlockingConnection): The connection to RabbitMQ.
-            channel_name (str): The name of the channel.
+            connection_name (str): The name of the connection configuration.
         """
-        self.connection = connection
-        self.channel_name = channel_name
-        self.channel = connection.channel()
+        self.connection_name = connection_name
+        self.connection_params = get_connection_params(connection_name)
+        self.connection: pika.BlockingConnection = None
+        self.channel_list: Dict[str, ApexMQChannelManager] = {}
         self.queue_list: Dict[str, ApexMQQueueManager] = {}
 
 
