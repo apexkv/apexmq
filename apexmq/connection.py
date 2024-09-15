@@ -140,39 +140,3 @@ class ApexMQConnectionManager:
         if self.connection:
             self.connection.close()
             print("RabbitMQ connection closed")
-
-    def create_all_channels_and_queues(self):
-        """
-        Create all channels and queues specified in the connection configuration.
-
-        This method reads the connection configuration and creates all specified
-        channels and their associated queues. If no channels are specified, it
-        creates a default channel with a default queue.
-
-        The method populates the channel_list and queue_list attributes of the
-        connection manager.
-
-        Returns:
-            None
-
-        Raises:
-            ImproperlyConfigured: If CHANNELS is declared but empty in the connection configuration.
-        """
-        if "CHANNELS" not in self.connection_params:
-            new_channel = self.create_channel("default")
-            DEFAULT_QUEUE_NAME = str(settings.ROOT_URLCONF).split(".")[0]
-            new_queue = new_channel.create_queue(DEFAULT_QUEUE_NAME)
-            self.queue_list[f"{new_channel.channel_name}-{DEFAULT_QUEUE_NAME}"] = (
-                new_queue
-            )
-        else:
-            channels_list = self.connection_params["CHANNELS"]
-            if len(channels_list) == 0:
-                raise ImproperlyConfigured(
-                    f"If you declare CHANNELS in your '{self.connection_name}' connection you have to declare channels and QUEUES configurations. At least channels list and queue names in that channel."
-                )
-            else:
-                for channel_name, channel_data in dict(channels_list).items():
-                    new_channel = self.create_channel(channel_name)
-                    new_queue_list = new_channel.create_all_queues(channel_data)
-                    self.queue_list.update(new_queue_list)
