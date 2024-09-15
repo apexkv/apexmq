@@ -38,109 +38,27 @@ class ApexMQQueueManager:
 
 class ApexMQChannelManager:
     """
-    Manages channels within a connection.
-
-    This class is responsible for creating and managing channels within a
-    RabbitMQ connection. It also manages queues within each channel.
+    Manages a specific channel in RabbitMQ.
 
     Attributes:
-        _channel_list (Dict[str, 'ApexMQChannelManager']): A class-level dictionary to store all channel instances.
-        connection (pika.BlockingConnection): The connection associated with this channel.
+        connection (pika.BlockingConnection): The connection to RabbitMQ.
         channel_name (str): The name of the channel.
-        channel: The channel object created from the connection.
-        queue_list (Dict[str, ApexMQQueueManager]): A dictionary to store queues associated with this channel.
+        channel (BlockingChannel): The created channel instance.
+        queue_list (Dict[str, ApexMQQueueManager]): A dictionary to keep track of all queues in this channel.
     """
 
-    _channel_list: Dict[str, "ApexMQChannelManager"] = {}
-
     def __init__(self, connection: pika.BlockingConnection, channel_name):
-        threading.Thread.__init__(self)
+        """
+        Initializes the ApexMQChannelManager.
+
+        Args:
+            connection (pika.BlockingConnection): The connection to RabbitMQ.
+            channel_name (str): The name of the channel.
+        """
         self.connection = connection
         self.channel_name = channel_name
         self.channel = connection.channel()
         self.queue_list: Dict[str, ApexMQQueueManager] = {}
-        self._channel_list[self.channel_name] = self
-        self._stop_event = threading.Event()
-
-    def create_queue(self, queue_name):
-        """
-        Create a new queue with the given name and add it to the queue list.
-
-        This method creates a new ApexMQQueueManager instance, which in turn
-        declares a new queue on the RabbitMQ server.
-
-        Args:
-            queue_name (str): The name of the queue to create.
-
-        Returns:
-            ApexMQQueueManager: A new queue manager instance.
-        """
-        new_queue = ApexMQQueueManager(self.channel, queue_name)
-        self.queue_list[queue_name] = new_queue
-        return new_queue
-
-    def create_all_queues(self, channel_data: dict):
-        """
-        Create all queues specified in the channel configuration.
-
-        This method reads the queue configuration from the channel_data and creates
-        all specified queues for the current channel.
-
-        Args:
-            channel_data (dict): A dictionary containing the channel configuration,
-                                 including a 'QUEUES' key with queue definitions.
-
-        Returns:
-            Dict[str, ApexMQQueueManager]: A dictionary of created queue managers,
-                                           with keys formatted as '{channel_name}-{queue_name}'.
-
-        Raises:
-            ImproperlyConfigured: If no queues are defined in the channel configuration.
-        """
-        if "QUEUES" not in channel_data:
-            raise ImproperlyConfigured(
-                f"You need to declare 1 or more queue in QUEUES section in channel '{self.channel_name}' because you have declared the channel."
-            )
-
-        queue_list = dict(channel_data["QUEUES"])
-        new_queue_list = {}
-
-        for queue_name, queue_params in queue_list.items():
-            new_queue_list[f"{self.channel_name}-{queue_name}"] = self.create_queue(
-                queue_name
-            )
-
-        return new_queue_list
-
-    def stop(self):
-        """
-        Stop the channel thread by setting the stop event and closing the connection.
-        """
-        print(f"Stopping channel {self.channel_name}.")
-        self._stop_event.set()
-
-    def start(self):
-        """
-        Start the channel thread, consuming messages from its queues.
-        This method is called when the thread starts and continuously
-        consumes messages until the stop event is set.
-        """
-        print(f"Channel {self.channel_name} started.")
-        try:
-            while not self._stop_event.is_set():
-                self.connection.process_data_events(time_limit=1)
-        except Exception as e:
-            print(f"Error in Channel {self.channel_name}: {e}")
-        finally:
-            self.close()
-
-    def close(self):
-        """
-        Close the channel and clean up.
-        """
-        if self.channel:
-            self.channel.close()
-        print(f"Channel {self.channel_name} closed.")
 
 
 class ApexMQConnectionManager:
