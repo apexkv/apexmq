@@ -71,9 +71,9 @@ def get_consumers_from_apps():
 
     Notes:
         - Iterates over all installed apps and attempts to import their consumers.py module.
-        - If the module contains a 'consumers' dictionary, it is added to the returned dictionary.
+        - If the module contains a 'consumers' list, it is added to the returned list.
     """
-    consumers_dict = {}
+    consumers_dict = []
     FILE_NAME = "consumers"
     DICTIONARY_NAME = "consumers"
 
@@ -88,9 +88,9 @@ def get_consumers_from_apps():
 
             # Check if the module has a dictionary named 'consumers'
             if hasattr(module, DICTIONARY_NAME) and isinstance(
-                getattr(module, DICTIONARY_NAME), dict
+                getattr(module, DICTIONARY_NAME), list
             ):
-                consumers_dict.update(getattr(module, DICTIONARY_NAME))
+                consumers_dict += getattr(module, DICTIONARY_NAME)
 
         except ModuleNotFoundError:
             # Skip if the app doesn't have a consumers.py file
