@@ -1,7 +1,10 @@
 import importlib
+import inspect
 from django.conf import settings
 from django.apps import apps
 from django.core.exceptions import ImproperlyConfigured
+
+from .consumers import BaseConsumer
 
 
 def get_apexmq_settings() -> dict:
@@ -64,38 +67,38 @@ def get_connection_params(connection_name) -> dict:
 
 def get_consumers_from_apps():
     """
-    Retrieves all consumer classes from the consumers.py files of installed apps.
+    Retrieves all consumer classes that are subclasses of BaseConsumer from the consumers.py files of installed apps.
 
     Returns:
-        dict: A dictionary with consumer names as keys and consumer classes as values.
+        list: A list of the consumer classes.
 
     Notes:
         - Iterates over all installed apps and attempts to import their consumers.py module.
-        - If the module contains a 'consumers' list, it is added to the returned list.
+        - If the module contains classes that are subclasses of BaseConsumer, they are added to the result.
     """
     consumers_dict = []
     FILE_NAME = "consumers"
-    DICTIONARY_NAME = "consumers"
 
     # Iterate over all installed apps
     for app_config in apps.get_app_configs():
-        try:
-            # Construct the path to the consumer.py file in the app
-            module_path = f"{app_config.name}.{FILE_NAME}"
+        if app_config.name != "apexmq":
+            try:
+                # Construct the path to the consumer.py file in the app
+                module_path = f"{app_config.name}.{FILE_NAME}"
 
-            # Dynamically import the consumer.py module
-            module = importlib.import_module(module_path)
+                # Dynamically import the consumer.py module
+                module = importlib.import_module(module_path)
 
-            # Check if the module has a dictionary named 'consumers'
-            if hasattr(module, DICTIONARY_NAME) and isinstance(
-                getattr(module, DICTIONARY_NAME), list
-            ):
-                consumers_dict += getattr(module, DICTIONARY_NAME)
+                class_list = inspect.getmembers(module, inspect.isclass)
 
-        except ModuleNotFoundError:
-            # Skip if the app doesn't have a consumers.py file
-            continue
-        except Exception as e:
-            print(f"Error while loading consumers from {app_config.name}: {e}")
+                for name, classobject in class_list:
+                    if issubclass(classobject, BaseConsumer):
+                        consumers_dict.append(classobject)
+
+            except ModuleNotFoundError:
+                # Skip if the app doesn't have a consumers.py file
+                continue
+            except Exception as e:
+                continue
 
     return consumers_dict
