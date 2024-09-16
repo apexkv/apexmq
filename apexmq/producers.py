@@ -1,7 +1,10 @@
 import json
+import logging
 import pika
 from typing import List
 from .connection import ApexMQChannelManager
+
+logger = logging.getLogger(__name__)
 
 
 def producer(
@@ -25,4 +28,4 @@ def producer(
                 properties=properties,
             )
         except Exception as e:
-            print(f"Failed to publish message to {publish_to}: {e}")
+            logger.error(f"Failed to publish message to {publish_to}: {e}")

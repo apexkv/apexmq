@@ -1,5 +1,8 @@
 import json
+import logging
 from django.core.exceptions import ImproperlyConfigured
+
+logger = logging.getLogger(__name__)
 
 
 class BaseConsumer:
@@ -45,6 +48,6 @@ class BaseConsumer:
             if callable(method):
                 method(json.loads(data))
             else:
-                print(
+                logger.warning(
                     f"New action detected. Cannot find handling method for,\nAction: {action}"
                 )

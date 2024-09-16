@@ -1,3 +1,4 @@
+import logging
 import pika
 from typing import Dict
 from pika.adapters.blocking_connection import BlockingChannel
@@ -5,6 +6,9 @@ from pika.exceptions import AMQPConnectionError
 from django.core.exceptions import ImproperlyConfigured
 
 from .conf import get_connection_params
+
+
+logger = logging.getLogger(__name__)
 
 
 class ApexMQQueueManager:
@@ -32,7 +36,7 @@ class ApexMQQueueManager:
         self.queue_name = queue_name
         self.queue = channel.queue_declare(queue=queue_name)
         self._queue_list[queue_name] = self
-        print(f"Queue created: {queue_name}")
+        logger.info(f"Queue created: {queue_name}")
 
     @classmethod
     def get_queue(cls, queue_name: str):
@@ -153,7 +157,7 @@ class ApexMQConnectionManager:
 
         channel_manager = ApexMQChannelManager(self.connection, channel_name)
 
-        print(f"Channel {channel_name} created.")
+        logger.info(f"Channel {channel_name} created.")
         return channel_manager
 
     def close_connection(self):
@@ -162,4 +166,4 @@ class ApexMQConnectionManager:
         """
         if self.connection:
             self.connection.close()
-            print("RabbitMQ connection closed")
+            logger.info("RabbitMQ connection closed")
