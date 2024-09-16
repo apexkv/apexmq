@@ -78,6 +78,10 @@ class ApexMQChannelManager:
             )
         return cls._channels_list[channel_name]
 
+    @classmethod
+    def get_first_channel_name(cls):
+        return list(cls._channels_list.keys())[0]
+
 
 class ApexMQConnectionManager:
     """
