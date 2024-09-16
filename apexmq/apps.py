@@ -3,16 +3,19 @@ from django.apps import AppConfig
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.autoreload import autoreload_started
 
-from .conf import get_apexmq_settings
+from .conf import get_apexmq_settings, get_consumers_from_apps
+from .consumers import BaseConsumer
 from .connection import (
     ApexMQConnectionManager,
     ApexMQQueueManager,
 )
 
+thread_list = []
+
 
 class ApexMQConfig(AppConfig):
-    name = "ApexMQ"
-    label = "apexmq"
+    name = "apexmq"
+    label = "ApexMQ"
 
     def ready(self):
         """
@@ -91,7 +94,17 @@ class ApexMQConfig(AppConfig):
 
     def message_callback(self, channel, method, properties, body):
         """
-        Callback function to process incoming messages from the queue.
-        Customize this method to fit your use case for handling messages.
+        Callback function to process messages from RabbitMQ queues.
+        This function matches the action type from the message properties with
+        the registered consumers and delegates message processing to the
+        appropriate consumer class.
         """
-        print(f"Received message: {body}")
+        action_type = str(properties.content_type)
+        # Fetch registered consumer classes
+        consumers = get_consumers_from_apps()
+
+        # Iterate over all registered consumers
+        for ConsumerClass in consumers:
+            # Check if the action type matches the consumer's lookup prefix
+            if ConsumerClass.lookup_prefix == action_type.split(".")[0]:
+                ConsumerClass().process_messege(action_type, body)
