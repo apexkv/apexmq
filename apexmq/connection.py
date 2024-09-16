@@ -2,6 +2,7 @@ import pika
 from typing import Dict
 from pika.adapters.blocking_connection import BlockingChannel
 from pika.exceptions import AMQPConnectionError
+from django.core.exceptions import ImproperlyConfigured
 
 from .conf import get_connection_params
 
@@ -19,7 +20,7 @@ class ApexMQQueueManager:
 
     _queue_list: Dict[str, "ApexMQQueueManager"] = {}
 
-    def __init__(self, channel: BlockingChannel, queue_name):
+    def __init__(self, channel: BlockingChannel, queue_name: str):
         """
         Initializes the ApexMQQueueManager.
 
@@ -33,6 +34,14 @@ class ApexMQQueueManager:
         self._queue_list[queue_name] = self
         print(f"Queue created: {queue_name}")
 
+    @classmethod
+    def get_queue(cls, queue_name: str):
+        if queue_name not in cls._queue_list:
+            raise ImproperlyConfigured(
+                f"Invalid queue name. Your choices are {list(cls._queue_list.keys())}"
+            )
+        return cls._queue_list[queue_name]
+
 
 class ApexMQChannelManager:
     """
@@ -45,7 +54,7 @@ class ApexMQChannelManager:
         queue_list (Dict[str, ApexMQQueueManager]): A dictionary to keep track of all queues in this channel.
     """
 
-    def __init__(self, connection: pika.BlockingConnection, channel_name):
+    def __init__(self, connection: pika.BlockingConnection, channel_name: str):
         """
         Initializes the ApexMQChannelManager.
 
@@ -71,7 +80,7 @@ class ApexMQConnectionManager:
         queue_list (Dict[str, ApexMQQueueManager]): A dictionary to keep track of all queues across channels.
     """
 
-    def __init__(self, connection_name):
+    def __init__(self, connection_name: str):
         """
         Initializes the ApexMQConnectionManager.
 
