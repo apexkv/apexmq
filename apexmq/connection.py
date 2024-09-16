@@ -34,31 +34,31 @@ class ApexMQQueueManager:
         self.queue_name = queue_name
         self.queue = channel.queue_declare(queue=queue_name)
         self._queue_list[queue_name] = self
+        print(f"Queue created: {queue_name}")
 
 
 class ApexMQChannelManager:
     """
-    Manages the connection to RabbitMQ.
+    Manages a specific channel in RabbitMQ.
 
     Attributes:
-        connection_name (str): The name of the connection configuration.
-        connection_params (dict): Parameters used to establish the connection.
         connection (pika.BlockingConnection): The connection to RabbitMQ.
-        channel_list (Dict[str, ApexMQChannelManager]): A dictionary to keep track of all channels in this connection.
-        queue_list (Dict[str, ApexMQQueueManager]): A dictionary to keep track of all queues across channels.
+        channel_name (str): The name of the channel.
+        channel (BlockingChannel): The created channel instance.
+        queue_list (Dict[str, ApexMQQueueManager]): A dictionary to keep track of all queues in this channel.
     """
 
-    def __init__(self, connection_name):
+    def __init__(self, connection: pika.BlockingConnection, channel_name):
         """
-        Initializes the ApexMQConnectionManager.
+        Initializes the ApexMQChannelManager.
 
         Args:
-            connection_name (str): The name of the connection configuration.
+            connection (pika.BlockingConnection): The connection to RabbitMQ.
+            channel_name (str): The name of the channel.
         """
-        self.connection_name = connection_name
-        self.connection_params = get_connection_params(connection_name)
-        self.connection: pika.BlockingConnection = None
-        self.channel_list: Dict[str, ApexMQChannelManager] = {}
+        self.connection = connection
+        self.channel_name = channel_name
+        self.channel = connection.channel()
         self.queue_list: Dict[str, ApexMQQueueManager] = {}
 
 
@@ -131,6 +131,8 @@ class ApexMQConnectionManager:
             raise Exception("Connection not established. Call create_connection first.")
 
         channel_manager = ApexMQChannelManager(self.connection, channel_name)
+
+        print(f"Channel {channel_name} created.")
         return channel_manager
 
     def close_connection(self):
