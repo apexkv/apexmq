@@ -4,7 +4,6 @@ from django.core.exceptions import ImproperlyConfigured
 from django.utils.autoreload import autoreload_started
 
 from .conf import get_apexmq_settings, get_consumers_from_apps
-from .consumers import BaseConsumer
 from .connection import (
     ApexMQConnectionManager,
     ApexMQQueueManager,
