@@ -1,4 +1,6 @@
+import logging
 import threading
+from django.utils import timezone
 from django.apps import AppConfig
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.autoreload import autoreload_started
@@ -10,6 +12,7 @@ from .connection import (
 )
 
 thread_list = []
+logger = logging.getLogger(__name__)
 
 
 class ApexMQConfig(AppConfig):
@@ -99,6 +102,7 @@ class ApexMQConfig(AppConfig):
         appropriate consumer class.
         """
         action_type = str(properties.content_type)
+        self.log_details(action_type, method.routing_key)
         # Fetch registered consumer classes
         consumers = get_consumers_from_apps()
 
@@ -107,3 +111,9 @@ class ApexMQConfig(AppConfig):
             # Check if the action type matches the consumer's lookup prefix
             if ConsumerClass.lookup_prefix == action_type.split(".")[0]:
                 ConsumerClass().process_messege(action_type, body)
+
+    def log_details(self, action, queue):
+        timestamp = timezone.now()
+        details = f'[{timestamp.day}/{timestamp.month}/{timestamp.year} {timestamp.hour}:{timestamp.minute}:{timestamp.second}] "QUEUE: {queue} | ACTION: {action}"'
+        logger.info(details)
+        print(details)
