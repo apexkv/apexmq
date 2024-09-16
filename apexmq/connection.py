@@ -54,6 +54,8 @@ class ApexMQChannelManager:
         queue_list (Dict[str, ApexMQQueueManager]): A dictionary to keep track of all queues in this channel.
     """
 
+    _channels_list: Dict[str, "ApexMQChannelManager"] = {}
+
     def __init__(self, connection: pika.BlockingConnection, channel_name: str):
         """
         Initializes the ApexMQChannelManager.
@@ -66,6 +68,15 @@ class ApexMQChannelManager:
         self.channel_name = channel_name
         self.channel = connection.channel()
         self.queue_list: Dict[str, ApexMQQueueManager] = {}
+        self._channels_list[channel_name] = self
+
+    @classmethod
+    def get_channel(cls, channel_name):
+        if channel_name not in cls._channels_list:
+            raise ImproperlyConfigured(
+                f"Invalid queue name. Your choices are {list(cls._channels_list.keys())}"
+            )
+        return cls._channels_list[channel_name]
 
 
 class ApexMQConnectionManager:
