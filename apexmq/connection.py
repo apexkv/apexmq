@@ -1,10 +1,7 @@
-import threading
 import pika
 from typing import Dict
-from django.conf import settings
 from pika.adapters.blocking_connection import BlockingChannel
 from pika.exceptions import AMQPConnectionError
-from django.core.exceptions import ImproperlyConfigured
 
 from .conf import get_connection_params
 
