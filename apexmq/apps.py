@@ -142,12 +142,13 @@ class ApexMQConfig(AppConfig):
         This looks for a `consumers.py` file in each app listed in `INSTALLED_APPS`.
         """
         for app in settings.INSTALLED_APPS:
-            try:
-                # Dynamically import the consumers module from each installed app
-                importlib.import_module(f"{app}.consumers")
-            except ModuleNotFoundError:
-                # If the app doesn't have a consumers module, skip it
-                pass
+            if app != "apexmq":
+                try:
+                    # Dynamically import the consumers module from each installed app
+                    importlib.import_module(f"{app}.consumers")
+                except ModuleNotFoundError:
+                    # If the app doesn't have a consumers module, skip it
+                    pass
 
     def log_details(self, action, queue):
         timestamp = timezone.now()
