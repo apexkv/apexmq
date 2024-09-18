@@ -83,6 +83,18 @@ To use ApexMQ in your Django project, follow these steps:
     - If the action type is `user.created`, ApexMQ will call the `created()` method.
     - If the action type is `user.updated`, it will call the `updated()` method.
 
+        3.2 **Consume Decorator**
+        You can consume messages using the on_consume decorator. This decorator registers a function as a handler for a specific action.
+
+    ```python
+    from apexmq.consumers import on_consume
+
+    @on_consume("user.created")
+    def user_create(data: dict):
+        # Handle user.created action
+        print(f"User created: {data}")
+    ```
+
 ---
 
 4. **Usages of Producer**
@@ -91,10 +103,10 @@ To use ApexMQ in your Django project, follow these steps:
    To send messages, use the producer() function:
 
 ```python
-from apexmq.producers import producer
+from apexmq.producers import publish
 
 # Send a message to multiple queues
-producer(
+publish(
     action="user.created",
     data={"id": 1, "username": "janedoe", "email": "jan@example.com"},
     to=["products", "inventory", "notifications"]
