@@ -28,6 +28,8 @@ class ApexMQConfig(AppConfig):
         """
         from django.conf import settings
 
+        self.register_on_consume_handlers()
+
         if settings.DEBUG:
             # Set up autoreload for development
             self.watch_for_changes()
@@ -126,6 +128,10 @@ class ApexMQConfig(AppConfig):
         if not action_method_found:
             msg = f"No consumers found for the action type: {action_type}"
             logger.warning(msg)
+
+    def register_on_consume_handlers(self):
+        for action, handler in action_handlers.items():
+            pass
 
     def log_details(self, action, queue):
         timestamp = timezone.now()
