@@ -50,8 +50,6 @@ class BaseConsumer:
             else:
                 msg = f"New action detected. Cannot find handling method for,\nAction: {action}"
                 logger.warning(msg)
-                print(msg)
         else:
             msg = f"New action detected. Cannot find handling method for,\nAction: {action}"
             logger.warning(msg)
-            print(msg)
