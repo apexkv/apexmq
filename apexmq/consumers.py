@@ -48,6 +48,10 @@ class BaseConsumer:
             if callable(method):
                 method(json.loads(data))
             else:
-                logger.warning(
-                    f"New action detected. Cannot find handling method for,\nAction: {action}"
-                )
+                msg = f"New action detected. Cannot find handling method for,\nAction: {action}"
+                logger.warning(msg)
+                print(msg)
+        else:
+            msg = f"New action detected. Cannot find handling method for,\nAction: {action}"
+            logger.warning(msg)
+            print(msg)
