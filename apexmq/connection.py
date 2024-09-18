@@ -1,3 +1,4 @@
+import json
 import logging
 import pika
 from typing import Dict
@@ -97,6 +98,27 @@ class ApexMQChannelManager:
         queue_manager = ApexMQQueueManager(self.channel, queue_name)
         self.queue_list[queue_name] = queue_manager
         return queue_manager
+
+    def publish(self, action: str, body: dict, to: str):
+        """
+        Publishes a message to the specified queue.
+
+        Args:
+            action (str): The action type of the message.
+            body (dict): The message body.
+            to (str): The name of the queue to publish the message to.
+        """
+        properties = pika.BasicProperties(action)
+        try:
+            self.create_queue(to)
+            self.channel.basic_publish(
+                exchange="",
+                routing_key=to,
+                body=json.dumps(body),
+                properties=properties,
+            )
+        except Exception as e:
+            logger.error(f"Failed to publish message to {to}: {e}")
 
 
 class ApexMQConnectionManager:
