@@ -60,8 +60,33 @@ class BaseConsumer:
 action_handlers = {}
 
 
-def on_consume(action: str):
+def on_consume(action):
+    """
+    Decorator to register a function as a handler for a specific action.
+
+    This decorator registers the decorated function in the global `action_handlers` dictionary
+    with the specified action as the key. The function will be called with the provided data
+    when the action is triggered.
+
+    Args:
+        action (str): The action type to register the handler for.
+
+    Returns:
+        function: The inner function that wraps the original function.
+
+    Example:
+        @on_consume("user.created")
+        def user_create(data: dict):
+            # Handle user.created action
+            pass
+    """
+
     def wrapper(f):
         action_handlers[action] = f
+
+        def inner(data):
+            f(data)
+
+        return inner
 
     return wrapper
