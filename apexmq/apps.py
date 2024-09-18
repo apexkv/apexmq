@@ -112,8 +112,13 @@ class ApexMQConfig(AppConfig):
             if ConsumerClass.lookup_prefix == action_type.split(".")[0]:
                 ConsumerClass().process_messege(action_type, body)
 
+        if len(consumers) == 0:
+            msg = f"No consumers found for the action type: {action_type}"
+            logger.warning(msg)
+            print(msg)
+
     def log_details(self, action, queue):
         timestamp = timezone.now()
-        details = f'[{timestamp.day}/{timestamp.month}/{timestamp.year} {timestamp.hour}:{timestamp.minute}:{timestamp.second}] "QUEUE: {queue} | ACTION: {action}"'
+        details = f'[{timestamp.day:02d}/{timestamp.month:02d}/{timestamp.year} {timestamp.hour:02d}:{timestamp.minute:02d}:{timestamp.second:02d}] "QUEUE: {queue} | ACTION: {action}"'
         logger.info(details)
         print(details)
