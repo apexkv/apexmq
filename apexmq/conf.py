@@ -118,7 +118,7 @@ def get_first_channel_name():
     settings = get_apexmq_settings()
 
     # Get the first connection name
-    first_connection = settings[settings.keys()[0]]
+    first_connection = settings[list(settings.keys())[0]]
 
     connection_channel_list = first_connection.get("CHANNELS", None)
 
