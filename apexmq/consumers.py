@@ -1,5 +1,6 @@
 import json
 import logging
+from typing import Dict
 from django.core.exceptions import ImproperlyConfigured
 
 logger = logging.getLogger(__name__)
@@ -54,3 +55,13 @@ class BaseConsumer:
         else:
             msg = f"New action detected. Cannot find handling method for,\nAction: {action}"
             logger.warning(msg)
+
+
+action_handlers: Dict[str, function] = {}
+
+
+def on_consume(action: str):
+    def wrapper(f: function):
+        action_handlers[action] = f
+
+    return wrapper
