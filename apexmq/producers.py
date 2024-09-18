@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 
-def producer(
+def publish(
     action: str,
     body: dict,
     to: List[str],
