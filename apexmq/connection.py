@@ -95,9 +95,11 @@ class ApexMQChannelManager:
         Args:
             queue_name (str): The name of the queue to create.
         """
-        queue_manager = ApexMQQueueManager(self.channel, queue_name)
-        self.queue_list[queue_name] = queue_manager
-        return queue_manager
+        if queue_name not in self.queue_list:
+            queue_manager = ApexMQQueueManager(self.channel, queue_name)
+            self.queue_list[queue_name] = queue_manager
+            return queue_manager
+        return self.queue_list[queue_name]
 
     def publish(self, action: str, body: dict, to: str):
         """
@@ -110,8 +112,8 @@ class ApexMQChannelManager:
         """
         properties = pika.BasicProperties(action)
         try:
-            self.create_queue(to)
-            self.channel.basic_publish(
+            queue_manager = self.create_queue(to)
+            queue_manager.channel.basic_publish(
                 exchange="",
                 routing_key=to,
                 body=json.dumps(body),
