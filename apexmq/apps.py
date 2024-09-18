@@ -115,7 +115,6 @@ class ApexMQConfig(AppConfig):
         if len(consumers) == 0:
             msg = f"No consumers found for the action type: {action_type}"
             logger.warning(msg)
-            print(msg)
 
     def log_details(self, action, queue):
         timestamp = timezone.now()
