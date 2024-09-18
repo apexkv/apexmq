@@ -9,6 +9,7 @@ from .conf import get_connection_params
 
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)
 
 
 class ApexMQQueueManager:

@@ -5,6 +5,7 @@ from typing import List
 from .connection import ApexMQChannelManager
 
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.DEBUG)
 
 
 def producer(
