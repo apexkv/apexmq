@@ -57,11 +57,11 @@ class BaseConsumer:
             logger.warning(msg)
 
 
-action_handlers: Dict[str, function] = {}
+action_handlers = {}
 
 
 def on_consume(action: str):
-    def wrapper(f: function):
+    def wrapper(f):
         action_handlers[action] = f
 
     return wrapper
