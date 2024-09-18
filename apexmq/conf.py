@@ -102,3 +102,34 @@ def get_consumers_from_apps():
                 continue
 
     return consumers_dict
+
+
+def get_first_channel_name():
+    """
+    Retrieves the first channel name from the APEXMQ settings.
+
+    Returns:
+        str: The name of the first channel.
+
+    Raises:
+        ImproperlyConfigured: If no channels are defined in the APEXMQ settings.
+    """
+    # Fetch APEXMQ settings
+    settings = get_apexmq_settings()
+
+    # Get the first connection name
+    first_connection = settings[settings.keys()[0]]
+
+    connection_channel_list = first_connection.get("CHANNELS", None)
+
+    if not connection_channel_list:
+        raise ImproperlyConfigured(
+            "No channels found in the first connection in APEXMQ settings."
+        )
+
+    first_channel_name = list(connection_channel_list.keys())[0]
+
+    if not first_channel_name:
+        raise ImproperlyConfigured("No channels found in APEXMQ settings.")
+
+    return first_channel_name
