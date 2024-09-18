@@ -118,11 +118,10 @@ class ApexMQConfig(AppConfig):
                 action_method_found = True
                 break
 
-        for action, handler in action_handlers.items():
-            if action == action_type:
-                handler(body)
+        if not action_method_found:
+            if action_type in action_handlers:
+                action_handlers[action_type](body)
                 action_method_found = True
-                break
 
         if not action_method_found:
             msg = f"No consumers found for the action type: {action_type}"
