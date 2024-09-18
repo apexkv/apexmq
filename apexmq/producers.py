@@ -19,7 +19,7 @@ def producer(
     for publish_to in to:
         try:
             # Ensure the queue exists (even if declared by other microservices)
-            channel.queue_declare(queue=publish_to, durable=True)
+            channel.queue_declare(queue=publish_to)
 
             # Publish the message to the queue
             channel.basic_publish(
