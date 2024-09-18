@@ -1,6 +1,4 @@
-import json
 import logging
-import pika
 from typing import List
 
 from .conf import get_first_channel_name
