@@ -1,5 +1,6 @@
 import logging
 import threading
+import importlib
 from django.utils import timezone
 from django.apps import AppConfig
 from django.core.exceptions import ImproperlyConfigured
@@ -27,6 +28,8 @@ class ApexMQConfig(AppConfig):
         listener to monitor code changes and reconfigure RabbitMQ connections.
         """
         from django.conf import settings
+
+        self.autodiscover_consumers(settings)
 
         self.register_on_consume_handlers()
 
@@ -132,6 +135,19 @@ class ApexMQConfig(AppConfig):
     def register_on_consume_handlers(self):
         for action, handler in action_handlers.items():
             pass
+
+    def autodiscover_consumers(self, settings):
+        """
+        Automatically discovers and imports consumers from all installed apps.
+        This looks for a `consumers.py` file in each app listed in `INSTALLED_APPS`.
+        """
+        for app in settings.INSTALLED_APPS:
+            try:
+                # Dynamically import the consumers module from each installed app
+                importlib.import_module(f"{app}.consumers")
+            except ModuleNotFoundError:
+                # If the app doesn't have a consumers module, skip it
+                pass
 
     def log_details(self, action, queue):
         timestamp = timezone.now()
