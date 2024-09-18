@@ -6,6 +6,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.utils.autoreload import autoreload_started
 
 from .conf import get_apexmq_settings, get_consumers_from_apps
+from .consumers import action_handlers
 from .connection import (
     ApexMQConnectionManager,
     ApexMQQueueManager,
@@ -107,13 +108,23 @@ class ApexMQConfig(AppConfig):
         # Fetch registered consumer classes
         consumers = get_consumers_from_apps()
 
+        action_method_found = False
+
         # Iterate over all registered consumers
         for ConsumerClass in consumers:
             # Check if the action type matches the consumer's lookup prefix
             if ConsumerClass.lookup_prefix == action_type.split(".")[0]:
                 ConsumerClass().process_messege(action_type, body)
+                action_method_found = True
+                break
 
-        if len(consumers) == 0:
+        for action, handler in action_handlers.items():
+            if action == action_type:
+                handler(body)
+                action_method_found = True
+                break
+
+        if not action_method_found:
             msg = f"No consumers found for the action type: {action_type}"
             logger.warning(msg)
 
