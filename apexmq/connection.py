@@ -87,6 +87,17 @@ class ApexMQChannelManager:
     def get_first_channel_name(cls):
         return list(cls._channels_list.keys())[0]
 
+    def create_queue(self, queue_name: str):
+        """
+        Creates a queue in the channel.
+
+        Args:
+            queue_name (str): The name of the queue to create.
+        """
+        queue_manager = ApexMQQueueManager(self.channel, queue_name)
+        self.queue_list[queue_name] = queue_manager
+        return queue_manager
+
 
 class ApexMQConnectionManager:
     """
