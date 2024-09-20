@@ -3,7 +3,7 @@ from functools import wraps
 from typing import Callable, List
 from django.db.models import Model
 from django.dispatch import receiver
-from django.db.models.signals import post_save, post_delete, pre_save, pre_delete
+from django.db.models.signals import post_save, post_delete
 
 from .conf import get_first_channel_name
 from .connection import ApexMQChannelManager
@@ -77,6 +77,7 @@ def on_model_update(
     to: List[str],
     action: str = None,
     fields: List[str] = None,
+    channel_name=get_first_channel_name(),
 ):
     """
     Registers a post-save signal to trigger when a model instance is updated.
@@ -98,6 +99,8 @@ def on_model_update(
         2. As a function:
             on_model_update(User, ["queue1", "queue2"], "custom.action", ["id", "email", "username"])
     """
+    if not issubclass(model, Model):
+        raise TypeError("The model argument must be a Django model class.")
 
     if not action:
         action = f"{model.__name__.lower()}.updated"
@@ -120,10 +123,28 @@ def on_model_update(
                     body = {field: getattr(instance, field) for field in fields}
 
                 # Publish the action and body to the specified queues
-                publish(action_val, body, to)
+                publish(action_val, body, to, channel_name)
 
         # Register the signal handler
         post_save.connect(on_update, sender=model)
         return func if func else on_update
 
     return decorator
+
+
+def on_model_delete(
+    model,
+    to: List[str],
+    action: str = None,
+    channel_name=get_first_channel_name(),
+):
+    if not issubclass(model, Model):
+        raise TypeError("The model argument must be a Django model class.")
+
+    if not action:
+        action = f"{model.__name__.lower()}.deleted"
+
+    def on_delete(sender, instance, **kwargs):
+        publish(action, {"id": instance.pk}, to, channel_name)
+
+    post_delete.connect(on_delete, sender=model)
