@@ -103,7 +103,7 @@ To use ApexMQ in your Django project, follow these steps:
    To send messages, use the producer() function:
 
 ```python
-from apexmq.producers import publish
+from apexmq.producers import publish, on_model_create, on_model_update, on_model_delete
 
 # Send a message to multiple queues
 publish(
@@ -111,6 +111,32 @@ publish(
     data={"id": 1, "username": "janedoe", "email": "jan@example.com"},
     to=["products", "inventory", "notifications"]
 )
+
+# this function will send id and name fields to "queue1", "queue2" queues action as "user.create".
+# if you didnt provide action action will autocreate as modelname.create
+on_model_create(User, ["queue1", "queue2"], ["id", "name"], "user.create")
+
+# this function will send id and email fields to "queue1", "queue2" queues action as "user.update".
+# if you didnt provide action action will autocreate as modelname.update
+on_model_update(User, ["queue1", "queue2"], ["id", "email"], "user.update")
+
+# now in this developer have more flexibility when model update. need to return tuple (action:str, data:dict)
+@on_model_update(User, ["queue1", "queue2"])
+def on_user_update(instance):
+    return (
+        "user.customaction",
+        {
+            "id": instance.id,
+            "name": instance.name,
+            "email": instance.email,
+            "custom_field" custom_value
+        }
+    )
+
+# this function will send id field to "queue1", "queue2" queues action as "user.deleted".
+# if you didnt provide action action will autocreate as modelname.deleted
+on_model_delete(User, ["queue1", "queue2"], "user.delete")
+
 ```
 
 -   **action:** The action type associated with the message (e.g., `user.created`).

@@ -28,8 +28,8 @@ def publish(
 
 def on_model_create(
     model,
-    fields: List[str],
     to: List[str],
+    fields: List[str],
     action: str = None,
     channel_name=get_first_channel_name(),
 ):
@@ -62,11 +62,12 @@ def on_model_create(
     if not issubclass(model, Model):
         raise TypeError("The model argument must be a Django model class.")
 
+    if not action:
+        action = f"{model.__name__.lower()}.created"
+
     def on_create(sender, instance, created, **kwargs):
         if created:
             body = {field: getattr(instance, field) for field in fields}
-            if not action:
-                action = f"{model.__name__.lower()}.created"
             publish(action, body, to, channel_name)
 
     post_save.connect(on_create, sender=model)
@@ -75,8 +76,8 @@ def on_model_create(
 def on_model_update(
     model,
     to: List[str],
-    action: str = None,
     fields: List[str] = None,
+    action: str = None,
     channel_name=get_first_channel_name(),
 ):
     """
@@ -138,6 +139,19 @@ def on_model_delete(
     action: str = None,
     channel_name=get_first_channel_name(),
 ):
+    """
+    Registers a post-delete signal to trigger when a model instance is deleted.
+
+    Args:
+        model (Model): The Django model class for which the signal is registered.
+        to (List[str]): A list of queue names where the message will be sent.
+        action (str, optional): The action identifier for the message being published.
+                                If not provided, defaults to '{model_name}.deleted'.
+
+    Usage:
+        1. on_model_delete(User, ["queue1", "queue2"], "custom.action")
+    """
+
     if not issubclass(model, Model):
         raise TypeError("The model argument must be a Django model class.")
 
