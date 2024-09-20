@@ -1,5 +1,6 @@
 import logging
-from typing import List
+from functools import wraps
+from typing import Callable, List
 from django.db.models import Model
 from django.dispatch import receiver
 from django.db.models.signals import post_save, post_delete, pre_save, pre_delete
@@ -69,3 +70,60 @@ def on_model_create(
             publish(action, body, to, channel_name)
 
     post_save.connect(on_create, sender=model)
+
+
+def on_model_update(
+    model,
+    to: List[str],
+    action: str = None,
+    fields: List[str] = None,
+):
+    """
+    Registers a post-save signal to trigger when a model instance is updated.
+
+    Args:
+        model (Model): The Django model class for which the signal is registered.
+        to (List[str]): A list of queue names where the message will be sent.
+        action (str, optional): The action identifier for the message being published. If not provided,
+                                it should be returned by the decorated function.
+        fields (List[str], optional): List of field names to extract data from the model instance.
+                                      Required if no decorated function is used.
+
+    Usage:
+        1. As a decorator:
+            @on_model_update(User, ["queue1", "queue2"])
+            def on_user_update(instance):
+                return ("custom.action", {"id": instance.id, "name": instance.name})
+
+        2. As a function:
+            on_model_update(User, ["queue1", "queue2"], "custom.action", ["id", "email", "username"])
+    """
+
+    if not action:
+        action = f"{model.__name__.lower()}.updated"
+
+    # Function decorator handling
+    def decorator(func: Callable = None):
+        @wraps(func)
+        def on_update(sender, instance, created, **kwargs):
+            if not created:  # Only trigger on updates (not creates)
+                if func:
+                    # If used as a decorator, get action and body from the decorated function
+                    action_val, body = func(instance)
+                else:
+                    # If used directly, use the fields and action provided as arguments
+                    if fields is None:
+                        raise ValueError(
+                            "Fields must be provided if not using a decorated function."
+                        )
+                    action_val = action
+                    body = {field: getattr(instance, field) for field in fields}
+
+                # Publish the action and body to the specified queues
+                publish(action_val, body, to)
+
+        # Register the signal handler
+        post_save.connect(on_update, sender=model)
+        return func if func else on_update
+
+    return decorator
