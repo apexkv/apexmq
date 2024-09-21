@@ -1,4 +1,4 @@
-name: \[TEST] Publish to PyPI
+name: TEST Publish to PyPI
 
 on:
     release:
@@ -24,4 +24,4 @@ jobs:
               run: python -m build
             - name: Publish package
               run: |
-                  twine upload dist/* -u ${{ secrets.PYPI_USERNAME }} -p ${{ secrets.PYPI_PASSWORD }}
+                  twine upload dist/* -u ${{ secrets.PYPI_USERNAME }} -p ${{ secrets.PYPI_PASSWORD }} --verbose
