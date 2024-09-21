@@ -23,8 +23,5 @@ jobs:
             - name: Build package
               run: python -m build
             - name: Publish package
-              env:
-                  TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-                  TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
               run: |
-                  twine upload -r testpypi dist/*
+                  twine upload -r testpypi dist/* -u ${{ secrets.PYPI_USERNAME }} -p ${{ secrets.PYPI_PASSWORD }}
