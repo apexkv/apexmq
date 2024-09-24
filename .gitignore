@@ -168,3 +168,4 @@ testappmq/
 testproject/
 test.py
 Dockerfile
+docker-compose.yml
