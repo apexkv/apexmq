@@ -170,3 +170,5 @@ test.py
 Dockerfile
 docker-compose.yml
 requirements.txt
+entrypoint.sh
+wait-for-it.sh
