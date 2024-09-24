@@ -167,3 +167,4 @@ testapp/
 testappmq/
 testproject/
 test.py
+Dockerfile
