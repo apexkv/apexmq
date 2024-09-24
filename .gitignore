@@ -169,3 +169,4 @@ testproject/
 test.py
 Dockerfile
 docker-compose.yml
+requirements.txt
