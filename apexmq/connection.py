@@ -1,4 +1,5 @@
 import json
+import ssl
 import pika
 import time
 from typing import Dict
@@ -22,7 +23,7 @@ class ApexMQQueueManager:
 
     _queue_list: Dict[str, "ApexMQQueueManager"] = {}
 
-    def __init__(self, channel: BlockingChannel, queue_name: str):
+    def __init__(self, channel: BlockingChannel, queue_name: str, queue_config: dict):
         """
         Initializes the ApexMQQueueManager.
 
@@ -32,7 +33,20 @@ class ApexMQQueueManager:
         """
         self.channel = channel
         self.queue_name = queue_name
-        self.queue = channel.queue_declare(queue=queue_name)
+        self.queue_config = queue_config
+        # Queue params
+        self.__AUTO_ACK__: bool = queue_config.get("AUTO_ACK", True)
+        self.__AUTO_DELETE__: bool = queue_config.get("AUTO_DELETE", False)
+        self.__DURABLE__: bool = queue_config.get("DURABLE", False)
+        self.__EXCLUSIVE__: bool = queue_config.get("EXCLUSIVE", False)
+        self.__PASSIVE__: bool = queue_config.get("PASSIVE", False)
+        self.queue = channel.queue_declare(
+            queue=queue_name,
+            auto_delete=self.__AUTO_DELETE__,
+            durable=self.__DURABLE__,
+            exclusive=self.__EXCLUSIVE__,
+            passive=self.__PASSIVE__,
+        )
         self._queue_list[queue_name] = self
         info(f"Queue created: {queue_name}")
 
@@ -43,6 +57,19 @@ class ApexMQQueueManager:
                 f"Invalid queue name. Your choices are {list(cls._queue_list.keys())}"
             )
         return cls._queue_list[queue_name]
+
+    def basic_consumer(self, on_message_callback):
+        """
+        Consumes messages from the queue.
+
+        Args:
+            on_message_callback (Callable): The callback function to handle incoming messages.
+        """
+        self.channel.basic_consume(
+            queue=self.queue_name,
+            on_message_callback=on_message_callback,
+            auto_ack=self.__AUTO_ACK__,
+        )
 
 
 class ApexMQChannelManager:
@@ -58,7 +85,12 @@ class ApexMQChannelManager:
 
     _channels_list: Dict[str, "ApexMQChannelManager"] = {}
 
-    def __init__(self, connection: pika.BlockingConnection, channel_name: str):
+    def __init__(
+        self,
+        connection: pika.BlockingConnection,
+        channel_name: str,
+        channel_config: dict,
+    ):
         """
         Initializes the ApexMQChannelManager.
 
@@ -68,6 +100,7 @@ class ApexMQChannelManager:
         """
         self.connection = connection
         self.channel_name = channel_name
+        self.channel_config = channel_config
         self.channel = connection.channel()
         self.queue_list: Dict[str, ApexMQQueueManager] = {}
         self._channels_list[channel_name] = self
@@ -91,8 +124,9 @@ class ApexMQChannelManager:
         Args:
             queue_name (str): The name of the queue to create.
         """
+        queue_config = self.channel_config.get("QUEUES", {}).get(queue_name, {})
         if queue_name not in self.queue_list:
-            queue_manager = ApexMQQueueManager(self.channel, queue_name)
+            queue_manager = ApexMQQueueManager(self.channel, queue_name, queue_config)
             self.queue_list[queue_name] = queue_manager
             return queue_manager
         return self.queue_list[queue_name]
@@ -150,11 +184,11 @@ class ApexMQConnectionManager:
         self.__PORT__: int = self.connection_params.get("PORT", 5672)
         self.__HOST__: str = self.connection_params.get("HOST", "localhost")
         self.__VIRTUAL_HOST__: str = self.connection_params.get("VIRTUAL_HOST", "/")
-        self.__CONNECT_RETRY_COUNT__: int = self.connection_params.get(
-            "CONNECT_RETRY_COUNT", 5
-        )
-        self.__CONNECT_RETRY_WAIT__: int = self.connection_params.get(
-            "CONNECT_RETRY_WAIT", 5
+        self.__MAX_RETRIES__: int = self.connection_params.get("MAX_RETRIES", 5)
+        self.__RETRY_DELAY__: int = self.connection_params.get("RETRY_DELAY", 5)
+        self.__HEARTBEAT__: int = self.connection_params.get("HEARTBEAT", 60)
+        self.__CONNECTION_TIMEOUT__: int = self.connection_params.get(
+            "CONNECTION_TIMEOUT", 10
         )
 
     def connect(self):
@@ -171,15 +205,20 @@ class ApexMQConnectionManager:
             username=self.__USER__,
             password=self.__PASSWORD__,
         )
+        ssl_options = None
         connected = False
         error_msg = None
-        for _ in range(self.__CONNECT_RETRY_COUNT__):
+        for _ in range(self.__MAX_RETRIES__):
             try:
                 connection_params = pika.ConnectionParameters(
                     host=self.__HOST__,
                     port=self.__PORT__,
                     virtual_host=self.__VIRTUAL_HOST__,
                     credentials=credentialis,
+                    heartbeat=self.__HEARTBEAT__,
+                    retry_delay=self.__RETRY_DELAY__,
+                    blocked_connection_timeout=self.__CONNECTION_TIMEOUT__,
+                    ssl_options=ssl_options,
                 )
                 self.connection = pika.BlockingConnection(connection_params)
                 connected = True
@@ -187,16 +226,20 @@ class ApexMQConnectionManager:
                 break
             except AMQPConnectionError as e:
                 error_msg = e
-                error(f"Failed to connect to messege queue server: {error_msg}")
+                error(
+                    f"Failed to connect to messege queue server: {self.connection_name}"
+                )
 
-            time.sleep(self.__CONNECT_RETRY_WAIT__)
+            time.sleep(self.__RETRY_DELAY__)
         if not connected:
             raise ConnectionError(
                 f"Failed to connect to messege queue server: {error_msg}"
             )
         return self.connection
 
-    def create_channel(self, channel_name: str) -> ApexMQChannelManager:
+    def create_channel(
+        self, channel_name: str, channel_config: dict
+    ) -> ApexMQChannelManager:
         """
         Creates and returns a channel manager for the specified channel name.
 
@@ -212,7 +255,9 @@ class ApexMQConnectionManager:
         if not self.connection:
             raise Exception("Connection not established. Call create_connection first.")
 
-        channel_manager = ApexMQChannelManager(self.connection, channel_name)
+        channel_manager = ApexMQChannelManager(
+            self.connection, channel_name, channel_config
+        )
 
         info(f"Channel {channel_name} created.")
         return channel_manager
