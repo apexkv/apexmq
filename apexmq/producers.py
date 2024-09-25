@@ -5,7 +5,7 @@ from django.db.models import Model
 from django.dispatch import receiver
 from django.db.models.signals import post_save, post_delete
 
-from .conf import get_first_channel_name
+from .conf import get_first_channel_name, info
 from .connection import ApexMQChannelManager
 
 logger = logging.getLogger(__name__)
@@ -21,6 +21,7 @@ def publish(
     for publish_to in to:
         try:
             channel_manager.publish(action, body, publish_to)
+            info(f'"PUBLISHED - QUEUE: {publish_to} | ACTION: {action}"')
         except Exception as e:
             logger.error(f"Failed to publish message to {publish_to}: {e}")
 
