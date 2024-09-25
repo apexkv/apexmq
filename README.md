@@ -32,19 +32,29 @@ To use ApexMQ in your Django project, follow these steps:
 
     ```python
     APEXMQ_SETTINGS = {
-        'default': {
-            'USER': 'your_username',
-            'PASSWORD': 'your_password',
-            'HOST': 'localhost',
-            'PORT': 5672,
-            'VIRTUAL_HOST': '/',
-            'CHANNELS': {
-                'channel_name': {
-                    'QUEUES': {
-                        'queue_name': {}
+        "default": {
+            "USER": "your_username",
+            "PASSWORD": "your_password",
+            "HOST": "localhost",
+            "PORT": 5672, # optional
+            "VIRTUAL_HOST": "/", # optional
+            "CONNECTION_TIMEOUT": 10, # optional
+            "HEARTBEAT": 60, # optional
+            "MAX_RETRIES": 5, # optional
+            "RETRY_DELAY": 5, # optional
+            "CHANNELS": {
+                "channel_name": {
+                    "QUEUES": {
+                        "queue_name": {
+                            "DURABLE": True, # optional
+                            "EXCLUSIVE": False, # optional
+                            "PASSIVE": False, # optional
+                            "AUTO_DELETE": False, # optional
+                            "AUTO_ACK": True, # optional
+                        }
                     }
                 }
-            }
+            },
         }
     }
     ```
@@ -97,7 +107,7 @@ To use ApexMQ in your Django project, follow these steps:
 
 ---
 
-4. **Usages of Producer**
+4. **Usages of Producers**
    ApexMQ provides a simple way to publish messages to multiple RabbitMQ queues. The producer can be imported from apexmq.producers and allows you to send messages to multiple queues in one call.
    4.1. **Using the Producer**
    To send messages, use the producer() function:
