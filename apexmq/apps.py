@@ -153,3 +153,4 @@ class ApexMQConfig(AppConfig):
         timestamp = timezone.now()
         details = f'[{timestamp.day:02d}/{timestamp.month:02d}/{timestamp.year} {timestamp.hour:02d}:{timestamp.minute:02d}:{timestamp.second:02d}] "QUEUE: {queue} | ACTION: {action}"'
         logger.info(details)
+        print(details)
