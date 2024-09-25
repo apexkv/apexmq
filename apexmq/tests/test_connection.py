@@ -1,8 +1,6 @@
 from unittest import TestCase, mock
 from pika.exceptions import AMQPConnectionError
-from apexmq.connection import (
-    ApexMQConnectionManager,
-)
+from apexmq.connection import ApexMQConnectionManager, ApexMQChannelManager
 
 
 class TestConnection(TestCase):
@@ -52,3 +50,22 @@ class TestConnection(TestCase):
 
         with self.assertRaises(ConnectionError):
             connection_manager.connect()
+
+    @mock.patch("apexmq.connection.pika.BlockingConnection")
+    @mock.patch("apexmq.connection.get_connection_params")
+    @mock.patch("apexmq.connection.info")
+    def test_create_channel(self, mock_info, mock_get_params, mock_blocking_connection):
+        mock_get_params.return_value = {
+            "USER": "testuser",
+            "PASSWORD": "testpass",
+            "HOST": "localhost",
+            "PORT": 5672,
+            "VIRTUAL_HOST": "/",
+        }
+
+        connection_manager = ApexMQConnectionManager(connection_name="test_connection")
+        connection_manager.connect()
+
+        channel = connection_manager.create_channel("test_channel", {})
+        self.assertTrue(channel)
+        self.assertIsInstance(channel, ApexMQChannelManager)
