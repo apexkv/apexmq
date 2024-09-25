@@ -4,7 +4,6 @@ from typing import Dict
 from django.core.exceptions import ImproperlyConfigured
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
 
 
 class BaseConsumer:

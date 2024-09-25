@@ -11,7 +11,6 @@ from .conf import get_connection_params
 
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
 
 
 class ApexMQQueueManager:
@@ -159,7 +158,7 @@ class ApexMQConnectionManager:
             "CONNECT_RETRY_COUNT", 5
         )
         self.__CONNECT_RETRY_WAIT__: int = self.connection_params.get(
-            "CONNECT_RETRY_WAIT", 3
+            "CONNECT_RETRY_WAIT", 5
         )
 
     def connect(self):
@@ -188,6 +187,7 @@ class ApexMQConnectionManager:
                 )
                 self.connection = pika.BlockingConnection(connection_params)
                 connected = True
+                logger.info(f"Connected to RabbitMQ: {self.__HOST__}")
                 break
             except AMQPConnectionError as e:
                 error_msg = e

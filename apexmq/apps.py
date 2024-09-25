@@ -15,7 +15,6 @@ from .connection import (
 
 thread_list = []
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
 
 
 class ApexMQConfig(AppConfig):
