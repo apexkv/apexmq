@@ -1,6 +1,7 @@
 import json
 import logging
 import pika
+import time
 from typing import Dict
 from pika.adapters.blocking_connection import BlockingChannel
 from pika.exceptions import AMQPConnectionError
@@ -157,6 +158,9 @@ class ApexMQConnectionManager:
         self.__CONNECT_RETRY_COUNT__: int = self.connection_params.get(
             "CONNECT_RETRY_COUNT", 5
         )
+        self.__CONNECT_RETRY_WAIT__: int = self.connection_params.get(
+            "CONNECT_RETRY_WAIT", 3
+        )
 
     def connect(self):
         """
@@ -187,7 +191,8 @@ class ApexMQConnectionManager:
                 break
             except AMQPConnectionError as e:
                 error_msg = e
-                continue
+
+            time.sleep(self.__CONNECT_RETRY_WAIT__)
         if not connected:
             raise ConnectionError(
                 f"Failed to connect to messege queue server: {error_msg}"
