@@ -165,3 +165,11 @@ With ApexMQ, you can efficiently manage RabbitMQ connections and messages in you
 -   The producer provides an easy-to-use interface for sending messages to multiple queues with a single function call.
 
 ApexMQ simplifies RabbitMQ integration in Django and allows you to focus more on handling business logic instead of managing connections and consumers manually.
+
+## Contributing
+
+We welcome contributions! Please follow the steps below to get started:
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](./LICENSE) file for details.
