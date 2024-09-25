@@ -169,17 +169,26 @@ class ApexMQConnectionManager:
             username=self.connection_params["USER"],
             password=self.connection_params["PASSWORD"],
         )
-        try:
-            connection_params = pika.ConnectionParameters(
-                host=self.__HOST__,
-                port=self.__PORT__,
-                virtual_host=self.__VIRTUAL_HOST__,
-                credentials=credentialis,
+        connected = False
+        error_msg = None
+        for _ in range(self.__CONNECT_RETRY_COUNT__):
+            try:
+                connection_params = pika.ConnectionParameters(
+                    host=self.__HOST__,
+                    port=self.__PORT__,
+                    virtual_host=self.__VIRTUAL_HOST__,
+                    credentials=credentialis,
+                )
+                self.connection = pika.BlockingConnection(connection_params)
+                connected = True
+                break
+            except AMQPConnectionError as e:
+                error_msg = e
+                continue
+        if not connected:
+            raise ConnectionError(
+                f"Failed to connect to messege queue server: {error_msg}"
             )
-            self.connection = pika.BlockingConnection(connection_params)
-        except AMQPConnectionError as e:
-            raise ConnectionError(f"Failed to connect to messege queue server: {e}")
-
         return self.connection
 
     def create_channel(self, channel_name: str) -> ApexMQChannelManager:
