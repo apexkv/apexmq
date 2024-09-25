@@ -147,6 +147,9 @@ class ApexMQConnectionManager:
         self.connection: pika.BlockingConnection = None
         self.channel_list: Dict[str, ApexMQChannelManager] = {}
         self.queue_list: Dict[str, ApexMQQueueManager] = {}
+        # User credentials
+        self.__USER__: str = self.connection_params["USER"]
+        self.__PASSWORD__: str = self.connection_params["PASSWORD"]
         # Set default values
         self.__PORT__: int = self.connection_params.get("PORT", 5672)
         self.__HOST__: str = self.connection_params.get("HOST", "localhost")
@@ -166,8 +169,8 @@ class ApexMQConnectionManager:
             ConnectionError: If unable to connect to RabbitMQ.
         """
         credentialis = pika.PlainCredentials(
-            username=self.connection_params["USER"],
-            password=self.connection_params["PASSWORD"],
+            username=self.__USER__,
+            password=self.__PASSWORD__,
         )
         connected = False
         error_msg = None
