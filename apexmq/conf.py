@@ -1,5 +1,7 @@
 import importlib
 import inspect
+import logging
+from django.utils import timezone
 from django.conf import settings
 from django.apps import apps
 from django.core.exceptions import ImproperlyConfigured
@@ -133,3 +135,25 @@ def get_first_channel_name():
         raise ImproperlyConfigured("No channels found in APEXMQ settings.")
 
     return first_channel_name
+
+
+logger = logging.getLogger(__name__)
+
+
+def info(msg):
+    timestamp = timezone.now()
+    details = f"[{timestamp.day:02d}/{timestamp.month:02d}/{timestamp.year} {timestamp.hour:02d}:{timestamp.minute:02d}:{timestamp.second:02d}] {msg}"
+    logger.info(details)
+    print(details)
+
+
+def warning(msg):
+    timestamp = timezone.now()
+    details = f"[{timestamp.day:02d}/{timestamp.month:02d}/{timestamp.year} {timestamp.hour:02d}:{timestamp.minute:02d}:{timestamp.second:02d}] {msg}"
+    logger.warning(details)
+
+
+def error(msg):
+    timestamp = timezone.now()
+    details = f"[{timestamp.day:02d}/{timestamp.month:02d}/{timestamp.year} {timestamp.hour:02d}:{timestamp.minute:02d}:{timestamp.second:02d}] {msg}"
+    logger.error(details)

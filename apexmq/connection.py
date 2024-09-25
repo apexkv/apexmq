@@ -1,5 +1,4 @@
 import json
-import logging
 import pika
 import time
 from typing import Dict
@@ -7,10 +6,7 @@ from pika.adapters.blocking_connection import BlockingChannel
 from pika.exceptions import AMQPConnectionError
 from django.core.exceptions import ImproperlyConfigured
 
-from .conf import get_connection_params
-
-
-logger = logging.getLogger(__name__)
+from .conf import get_connection_params, info, error
 
 
 class ApexMQQueueManager:
@@ -38,8 +34,7 @@ class ApexMQQueueManager:
         self.queue_name = queue_name
         self.queue = channel.queue_declare(queue=queue_name)
         self._queue_list[queue_name] = self
-        logger.info(f"Queue created: {queue_name}")
-        print(f"Queue created: {queue_name}")
+        info(f"Queue created: {queue_name}")
 
     @classmethod
     def get_queue(cls, queue_name: str):
@@ -121,7 +116,7 @@ class ApexMQChannelManager:
                 properties=properties,
             )
         except Exception as e:
-            logger.error(f"Failed to publish message to {to}: {e}")
+            error(f"Failed to publish message to {to}: {e}")
 
 
 class ApexMQConnectionManager:
@@ -188,12 +183,11 @@ class ApexMQConnectionManager:
                 )
                 self.connection = pika.BlockingConnection(connection_params)
                 connected = True
-                logger.info(f"Connected to RabbitMQ: {self.connection_name}")
-                print(f"Connected to RabbitMQ: {self.connection_name}")
+                info(f"Connected to RabbitMQ: {self.connection_name}")
                 break
             except AMQPConnectionError as e:
                 error_msg = e
-                logger.error(f"Failed to connect to messege queue server: {error_msg}")
+                error(f"Failed to connect to messege queue server: {error_msg}")
 
             time.sleep(self.__CONNECT_RETRY_WAIT__)
         if not connected:
@@ -220,8 +214,7 @@ class ApexMQConnectionManager:
 
         channel_manager = ApexMQChannelManager(self.connection, channel_name)
 
-        logger.info(f"Channel {channel_name} created.")
-        print(f"Channel {channel_name} created.")
+        info(f"Channel {channel_name} created.")
         return channel_manager
 
     def close_connection(self):
@@ -230,5 +223,4 @@ class ApexMQConnectionManager:
         """
         if self.connection:
             self.connection.close()
-            logger.info("RabbitMQ connection closed")
-            print("RabbitMQ connection closed")
+            info("RabbitMQ connection closed")

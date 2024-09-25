@@ -1,12 +1,10 @@
-import logging
 import threading
 import importlib
-from django.utils import timezone
 from django.apps import AppConfig
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.autoreload import autoreload_started
 
-from .conf import get_apexmq_settings, get_consumers_from_apps
+from .conf import get_apexmq_settings, get_consumers_from_apps, info, warning
 from .consumers import action_handlers
 from .connection import (
     ApexMQConnectionManager,
@@ -14,7 +12,6 @@ from .connection import (
 )
 
 thread_list = []
-logger = logging.getLogger(__name__)
 
 
 class ApexMQConfig(AppConfig):
@@ -129,7 +126,7 @@ class ApexMQConfig(AppConfig):
 
         if not action_method_found:
             msg = f"No consumers found for the action type: {action_type}"
-            logger.warning(msg)
+            warning(msg)
 
     def register_on_consume_handlers(self):
         for action, handler in action_handlers.items():
@@ -150,7 +147,4 @@ class ApexMQConfig(AppConfig):
                     pass
 
     def log_details(self, action, queue):
-        timestamp = timezone.now()
-        details = f'[{timestamp.day:02d}/{timestamp.month:02d}/{timestamp.year} {timestamp.hour:02d}:{timestamp.minute:02d}:{timestamp.second:02d}] "QUEUE: {queue} | ACTION: {action}"'
-        logger.info(details)
-        print(details)
+        info(f'"QUEUE: {queue} | ACTION: {action}"')
