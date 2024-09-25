@@ -147,6 +147,10 @@ class ApexMQConnectionManager:
         self.connection: pika.BlockingConnection = None
         self.channel_list: Dict[str, ApexMQChannelManager] = {}
         self.queue_list: Dict[str, ApexMQQueueManager] = {}
+        # Set default values
+        self.__PORT__ = self.connection_params.get("PORT", 5672)
+        self.__HOST__ = self.connection_params.get("HOST", "localhost")
+        self.__VIRTUAL_HOST__ = self.connection_params.get("VIRTUAL_HOST", "/")
 
     def connect(self):
         """
@@ -164,9 +168,9 @@ class ApexMQConnectionManager:
         )
         try:
             connection_params = pika.ConnectionParameters(
-                host=self.connection_params.get("HOST", "localhost"),
-                port=self.connection_params.get("PORT", 5672),
-                virtual_host=self.connection_params.get("VIRTUAL_HOST", "/"),
+                host=self.__HOST__,
+                port=self.__PORT__,
+                virtual_host=self.__VIRTUAL_HOST__,
                 credentials=credentialis,
             )
             self.connection = pika.BlockingConnection(connection_params)
