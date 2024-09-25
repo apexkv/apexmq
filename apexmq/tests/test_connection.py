@@ -40,7 +40,7 @@ class TestConnection(TestCase):
             "USER": "guest",
             "PASSWORD": "guest",
             "VIRTUAL_HOST": "/",
-            "MAX_RETRIES": 2,
+            "MAX_RETRIES": 1,
             "RETRY_DELAY": 1,
             "HEARTBEAT": 60,
             "CONNECTION_TIMEOUT": 10,
@@ -69,3 +69,21 @@ class TestConnection(TestCase):
         channel = connection_manager.create_channel("test_channel", {})
         self.assertTrue(channel)
         self.assertIsInstance(channel, ApexMQChannelManager)
+
+    @mock.patch("apexmq.connection.pika.BlockingConnection")
+    @mock.patch("apexmq.connection.get_connection_params")
+    @mock.patch("apexmq.connection.info")
+    def test_close_connection(
+        self, mock_info, mock_get_params, mock_blocking_connection
+    ):
+        mock_get_params.return_value = {
+            "USER": "testuser",
+            "PASSWORD": "testpass",
+            "HOST": "localhost",
+        }
+
+        connection_manager = ApexMQConnectionManager(connection_name="test")
+        connection_manager.connect()
+
+        connection_manager.close_connection()
+        mock_blocking_connection().close.assert_called_once()
