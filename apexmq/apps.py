@@ -66,18 +66,21 @@ class ApexMQConfig(AppConfig):
 
             # Iterate over all channels and queues in the configuration
             for channel_name, channel_config in config.get("CHANNELS", {}).items():
-                channel_manager = connection_manager.create_channel(channel_name)
+                channel_manager = connection_manager.create_channel(
+                    channel_name, channel_config
+                )
 
-                for queue_name in channel_config.get("QUEUES", {}).keys():
+                for queue_name, queue_config in channel_config.get(
+                    "QUEUES", {}
+                ).items():
                     queue_manager = ApexMQQueueManager(
-                        channel=channel_manager.channel, queue_name=queue_name
+                        channel=channel_manager.channel,
+                        queue_name=queue_name,
+                        queue_config=queue_config,
                     )
 
-                    # Set up message consummer for each queue
-                    channel_manager.channel.basic_consume(
-                        queue=queue_name,
-                        on_message_callback=self.message_callback,
-                        auto_ack=True,
+                    queue_manager.basic_consumer(
+                        on_message_callback=self.message_callback
                     )
 
                 # Start a new thread to handle message consumption
@@ -147,4 +150,4 @@ class ApexMQConfig(AppConfig):
                     pass
 
     def log_details(self, action, queue):
-        info(f'"QUEUE: {queue} | ACTION: {action}"')
+        info(f'"CONSUMED - QUEUE: {queue} | ACTION: {action}"')
