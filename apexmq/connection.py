@@ -148,9 +148,12 @@ class ApexMQConnectionManager:
         self.channel_list: Dict[str, ApexMQChannelManager] = {}
         self.queue_list: Dict[str, ApexMQQueueManager] = {}
         # Set default values
-        self.__PORT__ = self.connection_params.get("PORT", 5672)
-        self.__HOST__ = self.connection_params.get("HOST", "localhost")
-        self.__VIRTUAL_HOST__ = self.connection_params.get("VIRTUAL_HOST", "/")
+        self.__PORT__: int = self.connection_params.get("PORT", 5672)
+        self.__HOST__: str = self.connection_params.get("HOST", "localhost")
+        self.__VIRTUAL_HOST__: str = self.connection_params.get("VIRTUAL_HOST", "/")
+        self.__CONNECT_RETRY_COUNT__: int = self.connection_params.get(
+            "CONNECT_RETRY_COUNT", 5
+        )
 
     def connect(self):
         """
