@@ -32,9 +32,9 @@ pip install apexmq
     ]
     ```
 
-3. **Configure RabbitMQ Settings**
+3. **Configure ApexMQ Settings**
 
-    Define RabbitMQ settings in your Django `settings.py` file:
+    Define ApexMQ settings in your Django `settings.py` file:
 
     ```python
     APEXMQ_SETTINGS = {
