@@ -14,7 +14,13 @@ ApexMQ is a Django application designed to manage RabbitMQ connections and messa
 
 To use ApexMQ in your Django project, follow these steps:
 
-1. **Add ApexMQ to your Django Project**
+1. **Install ApexMQ Library**
+
+```
+pip install apexmq
+```
+
+2. **Add ApexMQ to your Django Project**
 
     Add `apexmq` to the `INSTALLED_APPS` list in your Django project's `settings.py`:
 
@@ -26,7 +32,7 @@ To use ApexMQ in your Django project, follow these steps:
     ]
     ```
 
-2. **Configure RabbitMQ Settings**
+3. **Configure RabbitMQ Settings**
 
     Define RabbitMQ settings in your Django `settings.py` file:
 
@@ -59,7 +65,7 @@ To use ApexMQ in your Django project, follow these steps:
     }
     ```
 
-3. **Usages of Consumer**
+4. **Usages of Consumer**
    3.1 **Create a Consumer**
    To create a custom consumer, subclass `BaseConsumer` and define methods to handle specific actions:
 
@@ -107,9 +113,9 @@ To use ApexMQ in your Django project, follow these steps:
 
 ---
 
-4. **Usages of Producers**
+5. **Usages of Producers**
    ApexMQ provides a simple way to publish messages to multiple RabbitMQ queues. The producer can be imported from apexmq.producers and allows you to send messages to multiple queues in one call.
-   4.1. **Using the Producer**
+   5.1. **Using the Producer**
    To send messages, use the producer() function:
 
 ```python
@@ -153,7 +159,7 @@ on_model_delete(User, ["queue1", "queue2"], "user.delete")
 -   **data:** The message body, typically a dictionary.
 -   **to:** A list of queue names to send the message to.
 
-4.2. **Example Use Case**
+5.2. **Example Use Case**
 
 For example, when a user is created in your system, you can send a message to the products, inventory, and notifications queues simultaneously, informing each of these services about the new user.
 
