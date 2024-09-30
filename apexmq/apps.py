@@ -4,7 +4,7 @@ from django.apps import AppConfig
 from django.core.exceptions import ImproperlyConfigured
 from django.utils.autoreload import autoreload_started
 
-from .conf import get_apexmq_settings, get_consumers_from_apps, info, warning
+from .conf import get_connection_settings, get_consumers_from_apps, info, warning
 from .consumers import action_handlers
 from .connection import (
     ApexMQConnectionManager,
@@ -52,7 +52,7 @@ class ApexMQConfig(AppConfig):
         # Stop any existing RabbitMQ consumer threads
         self.stop_threads()
         # Fetch RabbitMQ settings
-        apexmq_settings = get_apexmq_settings()
+        apexmq_settings = get_connection_settings()
 
         if not apexmq_settings:
             raise ImproperlyConfigured(
