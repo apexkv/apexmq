@@ -54,6 +54,25 @@ def get_connection_settings() -> dict:
     return settings
 
 
+def get_exchange_settings() -> dict:
+    """
+    Retrieve the apexmq exchange settings from the APEXMQ_SETTINGS dictionary.
+
+    Returns:
+        dict: The exchange settings.
+
+    Raises:
+        ImproperlyConfigured: If "EXCHANGES" not in APEXMQ_SETTINGS.
+    """
+    # Fetch APEXMQ settings
+    settings = get_apexmq_settings()
+
+    if "EXCHANGES" not in settings:
+        raise ImproperlyConfigured("EXCHANGES is not defined in APEXMQ_SETTINGS.")
+
+    return settings
+
+
 def get_connection_params(connection_name) -> dict:
     """
     Retrieve the apexmq connection parameters for the specified connection name.
