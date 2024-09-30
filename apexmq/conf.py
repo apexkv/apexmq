@@ -87,7 +87,7 @@ def get_connection_params(connection_name) -> dict:
         ImproperlyConfigured: If the connection name is not found or required fields are missing.
     """
     # Fetch APEXMQ settings
-    settings = get_apexmq_settings()
+    settings = get_connection_settings()
 
     if connection_name not in settings:
         raise ImproperlyConfigured(
@@ -155,7 +155,7 @@ def get_first_channel_name():
         ImproperlyConfigured: If no channels are defined in the APEXMQ settings.
     """
     # Fetch APEXMQ settings
-    settings = get_apexmq_settings()
+    settings = get_connection_settings()
 
     # Get the first connection name
     first_connection = settings[list(settings.keys())[0]]
