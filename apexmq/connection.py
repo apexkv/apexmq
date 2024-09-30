@@ -1,5 +1,4 @@
 import json
-import ssl
 import pika
 import time
 from typing import Dict
@@ -8,6 +7,34 @@ from pika.exceptions import AMQPConnectionError
 from django.core.exceptions import ImproperlyConfigured
 
 from .conf import get_connection_params, info, error
+
+
+class ApexMQExchangeManager:
+    """
+    Manages the configuration and operations of an exchange in the ApexMQ messaging system.
+    Attributes:
+        channel: The communication channel to be used for the exchange.
+        exchange_name: The name of the exchange.
+        exchange_config: The configuration settings for the exchange.
+        _exchange_list (Dict[str, "ApexMQExchangeManager"]): A class-level dictionary to keep track of all exchange instances.
+    """
+
+    _exchange_list: Dict[str, "ApexMQExchangeManager"] = {}
+
+    def __init__(
+        self, channel: BlockingChannel, exchange_name: str, exchange_config: dict
+    ):
+        """
+        Initializes the ApexMQExchangeManager.
+
+        Args:
+            channel (BlockingChannel): The channel used to interact with RabbitMQ.
+            exchange_name (str): The name of the exchange.
+            exchange_config (dict): The configuration settings for the exchange.
+        """
+        self.channel = channel
+        self.exchange_name = exchange_name
+        self.exchange_config = exchange_config
 
 
 class ApexMQQueueManager:
