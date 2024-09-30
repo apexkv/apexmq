@@ -35,6 +35,25 @@ def get_apexmq_settings() -> dict:
     return user_settings
 
 
+def get_connection_settings() -> dict:
+    """
+    Retrieve the apexmq connection settings from the APEXMQ_SETTINGS dictionary.
+
+    Returns:
+        dict: The connection settings.
+
+    Raises:
+        ImproperlyConfigured: If "CONNECTIONS" not in APEXMQ_SETTINGS.
+    """
+    # Fetch APEXMQ settings
+    settings = get_apexmq_settings()
+
+    if "CONNECTIONS" not in settings:
+        raise ImproperlyConfigured("CONNECTIONS is not defined in APEXMQ_SETTINGS.")
+
+    return settings
+
+
 def get_connection_params(connection_name) -> dict:
     """
     Retrieve the apexmq connection parameters for the specified connection name.
