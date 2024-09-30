@@ -67,15 +67,21 @@ class ApexMQQueueManager:
         self.__DURABLE__: bool = queue_config.get("DURABLE", False)
         self.__EXCLUSIVE__: bool = queue_config.get("EXCLUSIVE", False)
         self.__PASSIVE__: bool = queue_config.get("PASSIVE", False)
-        self.queue = channel.queue_declare(
-            queue=queue_name,
+        self.declare_queue()
+
+    def declare_queue(self):
+        """
+        Declares the queue in RabbitMQ.
+        """
+        self.queue = self.channel.queue_declare(
+            queue=self.queue_name,
             auto_delete=self.__AUTO_DELETE__,
             durable=self.__DURABLE__,
             exclusive=self.__EXCLUSIVE__,
             passive=self.__PASSIVE__,
         )
-        self._queue_list[queue_name] = self
-        info(f"Queue created: {queue_name}")
+        self._queue_list[self.queue_name] = self
+        info(f"Queue created: {self.queue_name}")
 
     @classmethod
     def get_queue(cls, queue_name: str):
