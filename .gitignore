@@ -172,3 +172,4 @@ docker-compose.yml
 requirements.txt
 entrypoint.sh
 wait-for-it.sh
+.vscode
