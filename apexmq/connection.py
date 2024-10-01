@@ -1,10 +1,12 @@
 import json
 import pika
 import time
-from typing import Dict
+from typing import Dict, List
 from pika.adapters.blocking_connection import BlockingChannel
 from pika.exceptions import AMQPConnectionError
 from django.core.exceptions import ImproperlyConfigured
+import requests
+from requests.auth import HTTPBasicAuth
 
 from .conf import get_connection_params, info, error
 
@@ -120,7 +122,7 @@ class ApexMQChannelManager:
 
     def __init__(
         self,
-        connection: pika.BlockingConnection,
+        connection: "ApexMQConnectionManager",
         channel_name: str,
         channel_config: dict,
     ):
@@ -134,7 +136,7 @@ class ApexMQChannelManager:
         self.connection = connection
         self.channel_name = channel_name
         self.channel_config = channel_config
-        self.channel = connection.channel()
+        self.channel = connection.connection.channel()
         self.queue_list: Dict[str, ApexMQQueueManager] = {}
         self._channels_list[channel_name] = self
 
@@ -288,9 +290,7 @@ class ApexMQConnectionManager:
         if not self.connection:
             raise Exception("Connection not established. Call create_connection first.")
 
-        channel_manager = ApexMQChannelManager(
-            self.connection, channel_name, channel_config
-        )
+        channel_manager = ApexMQChannelManager(self, channel_name, channel_config)
 
         info(f"Channel {channel_name} created.")
         return channel_manager
@@ -302,3 +302,17 @@ class ApexMQConnectionManager:
         if self.connection:
             self.connection.close()
             info("RabbitMQ connection closed")
+
+    def get_queue_list_in_connection(self) -> List[str]:
+        url = f"http://{self.__HOST__}:{self.__PORT__}/api/queues"
+        response = requests.get(
+            url, auth=HTTPBasicAuth(self.__USER__, self.__PASSWORD__)
+        )
+
+        if response.status_code == 200:
+            queues = response.json()
+            queues = [queue["name"] for queue in queues]
+            return queues
+        else:
+            print(f"Failed to fetch queues: {response.status_code}")
+            return []
