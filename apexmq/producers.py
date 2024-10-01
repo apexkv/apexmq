@@ -14,8 +14,34 @@ def publish(
     action: str,
     body: dict,
     to: List[str] | Literal["broadcast"],
-    channel_name=get_first_channel_name(),
+    channel_name=None,
 ):
+    """
+    Publishes a message to the specified queue(s) with the given action and body.
+
+    Args:
+        action (str): The action identifier for the message being published.
+        body (dict): The data to be sent in the message.
+        to (List[str] | Literal["broadcast"]): A list of queue names or "broadcast" where the message will be sent.
+        channel_name (str, optional): The name of the channel through which the message
+                                      will be published. Defaults to the first channel name
+                                      configured in the system.
+    Functionality:
+        - The function gets the channel manager for the specified channel name.
+        - The function publishes the message to the specified queue(s) using the
+          `publish` method of the channel manager.
+        - The function logs the success or failure of the publishing operation.
+    Usage:
+        publish("user.create", {"id": 1, "name": "John Doe"}, ["queue1", "queue2"])
+        - This will send a message with the action "user.create" and the body
+          {"id": 1, "name": "John Doe"} to the "queue1" and "queue2" queues.
+        publish("user.create", {"id": 1, "name": "John Doe"}, "broadcast")
+        - This will broadcast a message with the action "user.create" and the body
+          {"id": 1, "name": "John Doe"} to all queues in the connection.
+    """
+    if not channel_name:
+        channel_name = get_first_channel_name()
+
     channel_manager = ApexMQChannelManager.get_channel(channel_name)
 
     if to == "broadcast":
@@ -34,7 +60,7 @@ def on_model_create(
     to: List[str] | Literal["broadcast"],
     fields: List[str],
     action: str = None,
-    channel_name=get_first_channel_name(),
+    channel_name=None,
 ):
     """
     Registers a post-save signal handler to publish specific fields of a model
@@ -56,7 +82,7 @@ def on_model_create(
         - A message is constructed with the extracted fields and sent to the specified
           queues via the `publish` function.
 
-    Example:
+    Usage:
         on_model_create(User, ["id", "name"], "user.create", ["queue1", "queue2"])
         - This will send the `id` and `name` fields of a new `User` instance to
           "queue1" and "queue2" when a new user is created.
@@ -81,7 +107,7 @@ def on_model_update(
     to: List[str] | Literal["broadcast"],
     fields: List[str] = None,
     action: str = None,
-    channel_name=get_first_channel_name(),
+    channel_name=None,
 ):
     """
     Registers a post-save signal to trigger when a model instance is updated.
@@ -93,7 +119,12 @@ def on_model_update(
                                 it should be returned by the decorated function.
         fields (List[str], optional): List of field names to extract data from the model instance.
                                       Required if no decorated function is used.
-
+    Functionality:
+        - The function connects a post-save signal to the specified model.
+        - When an instance of the model is updated, the specified fields are extracted
+          from the model instance.
+        - A message is constructed with the extracted fields and sent to the specified
+          queues via the `publish` function.
     Usage:
         1. As a decorator:
             @on_model_update(User, ["queue1", "queue2"])
@@ -140,7 +171,7 @@ def on_model_delete(
     model,
     to: List[str] | Literal["broadcast"],
     action: str = None,
-    channel_name=get_first_channel_name(),
+    channel_name=None,
 ):
     """
     Registers a post-delete signal to trigger when a model instance is deleted.
@@ -150,7 +181,10 @@ def on_model_delete(
         to (List[str]): A list of queue names where the message will be sent.
         action (str, optional): The action identifier for the message being published.
                                 If not provided, defaults to '{model_name}.deleted'.
-
+    Functionality:
+        - The function connects a post-delete signal to the specified model.
+        - When an instance of the model is deleted, a message is constructed with the
+          instance's primary key and sent to the specified queues via the `publish` function
     Usage:
         1. on_model_delete(User, ["queue1", "queue2"], "custom.action")
     """
