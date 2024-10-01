@@ -1,8 +1,7 @@
 import logging
 from functools import wraps
-from typing import Callable, List
+from typing import Callable, List, Literal
 from django.db.models import Model
-from django.dispatch import receiver
 from django.db.models.signals import post_save, post_delete
 
 from .conf import get_first_channel_name, info
@@ -14,10 +13,14 @@ logger = logging.getLogger(__name__)
 def publish(
     action: str,
     body: dict,
-    to: List[str],
+    to: List[str] | Literal["broadcast"],
     channel_name=get_first_channel_name(),
 ):
     channel_manager = ApexMQChannelManager.get_channel(channel_name)
+
+    if to == "broadcast":
+        to = channel_manager.connection.get_queue_list_in_connection()
+
     for publish_to in to:
         try:
             channel_manager.publish(action, body, publish_to)
@@ -28,7 +31,7 @@ def publish(
 
 def on_model_create(
     model,
-    to: List[str],
+    to: List[str] | Literal["broadcast"],
     fields: List[str],
     action: str = None,
     channel_name=get_first_channel_name(),
@@ -75,7 +78,7 @@ def on_model_create(
 
 def on_model_update(
     model,
-    to: List[str],
+    to: List[str] | Literal["broadcast"],
     fields: List[str] = None,
     action: str = None,
     channel_name=get_first_channel_name(),
@@ -135,7 +138,7 @@ def on_model_update(
 
 def on_model_delete(
     model,
-    to: List[str],
+    to: List[str] | Literal["broadcast"],
     action: str = None,
     channel_name=get_first_channel_name(),
 ):
