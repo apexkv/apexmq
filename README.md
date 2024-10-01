@@ -121,6 +121,8 @@ pip install apexmq
 ```python
 from apexmq.producers import publish, on_model_create, on_model_update, on_model_delete
 
+# In to there for to you can add "broadcast" or ["queue1", "queue2"] for send data
+
 # Send a message to multiple queues
 publish(
     action="user.created",
