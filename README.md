@@ -38,29 +38,31 @@ pip install apexmq
 
     ```python
     APEXMQ_SETTINGS = {
-        "default": {
-            "USER": "your_username",
-            "PASSWORD": "your_password",
-            "HOST": "localhost",
-            "PORT": 5672, # optional
-            "VIRTUAL_HOST": "/", # optional
-            "CONNECTION_TIMEOUT": 10, # optional
-            "HEARTBEAT": 60, # optional
-            "MAX_RETRIES": 5, # optional
-            "RETRY_DELAY": 5, # optional
-            "CHANNELS": {
-                "channel_name": {
-                    "QUEUES": {
-                        "queue_name": {
-                            "DURABLE": True, # optional
-                            "EXCLUSIVE": False, # optional
-                            "PASSIVE": False, # optional
-                            "AUTO_DELETE": False, # optional
-                            "AUTO_ACK": True, # optional
+        "CONNECTIONS":{
+            "default": {
+                "USER": "your_username",
+                "PASSWORD": "your_password",
+                "HOST": "localhost",
+                "PORT": 5672, # optional
+                "VIRTUAL_HOST": "/", # optional
+                "CONNECTION_TIMEOUT": 10, # optional
+                "HEARTBEAT": 60, # optional
+                "MAX_RETRIES": 5, # optional
+                "RETRY_DELAY": 5, # optional
+                "CHANNELS": {
+                    "channel_name": {
+                        "QUEUES": {
+                            "queue_name": {
+                                "DURABLE": True, # optional
+                                "EXCLUSIVE": False, # optional
+                                "PASSIVE": False, # optional
+                                "AUTO_DELETE": False, # optional
+                                "AUTO_ACK": True, # optional
+                            }
                         }
                     }
-                }
-            },
+                },
+            }
         }
     }
     ```
@@ -77,7 +79,7 @@ pip install apexmq
     class MyCustomConsumer(BaseConsumer):
         lookup_prefix = "prefix"
 
-        def created(self, action: str, data):
+        def created(self, data):
             """
             This method will get data for action type: prefix.created
             """
