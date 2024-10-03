@@ -51,7 +51,7 @@ def get_connection_settings() -> dict:
     if "CONNECTIONS" not in settings:
         raise ImproperlyConfigured("CONNECTIONS is not defined in APEXMQ_SETTINGS.")
 
-    return settings
+    return settings["CONNECTIONS"]
 
 
 def get_exchange_settings() -> dict:
@@ -70,7 +70,7 @@ def get_exchange_settings() -> dict:
     if "EXCHANGES" not in settings:
         raise ImproperlyConfigured("EXCHANGES is not defined in APEXMQ_SETTINGS.")
 
-    return settings
+    return settings["EXCHANGES"]
 
 
 def get_connection_params(connection_name) -> dict:
