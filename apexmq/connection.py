@@ -178,7 +178,6 @@ class ApexMQChannelManager:
         """
         properties = pika.BasicProperties(action)
         try:
-            queue_manager = self.create_queue(to)
             self.publish_channel.basic_publish(
                 exchange="",
                 routing_key=to,
