@@ -120,6 +120,7 @@ class ApexMQChannelManager:
     """
 
     _channels_list: Dict[str, "ApexMQChannelManager"] = {}
+    _publish_channel: "ApexMQChannelManager" = None
 
     def __init__(
         self,
@@ -140,6 +141,12 @@ class ApexMQChannelManager:
         self.channel_name = channel_name
         self.channel_config = channel_config
         self.queue_list: Dict[str, ApexMQQueueManager] = {}
+        self.publish_channel = connection_manager.get_connection().channel()
+        self._publish_channel = self
+
+    @classmethod
+    def get_publish_channel(cls):
+        return cls._publish_channel
 
     @classmethod
     def get_channel(cls, channel_name):
@@ -178,7 +185,7 @@ class ApexMQChannelManager:
         """
         properties = pika.BasicProperties(content_type=action)
         try:
-            self.channel.basic_publish(
+            self.publish_channel.basic_publish(
                 exchange="",
                 routing_key=to,
                 body=json.dumps(body),
@@ -186,18 +193,6 @@ class ApexMQChannelManager:
             )
         except Exception as e:
             error(f"Failed to publish message to {to}: {e}")
-            # Attempt to reconnect and retry
-            self.connection_manager.close_connection()
-            new_channel = self.connection_manager.create_channel(
-                self.channel_name, self.channel_config
-            )
-            self.channel = new_channel.channel
-            self.channel.basic_publish(
-                exchange="",
-                routing_key=to,
-                body=json.dumps(body),
-                properties=properties,
-            )
 
 
 class ApexMQConnectionManager:
