@@ -137,6 +137,7 @@ class ApexMQChannelManager:
         self.channel_name = channel_name
         self.channel_config = channel_config
         self.channel = connection.connection.channel()
+        self.publish_channel = connection.connection.channel()
         self.queue_list: Dict[str, ApexMQQueueManager] = {}
         self._channels_list[channel_name] = self
 
@@ -178,7 +179,7 @@ class ApexMQChannelManager:
         properties = pika.BasicProperties(action)
         try:
             queue_manager = self.create_queue(to)
-            queue_manager.channel.basic_publish(
+            self.publish_channel.basic_publish(
                 exchange="",
                 routing_key=to,
                 body=json.dumps(body),
