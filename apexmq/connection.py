@@ -316,3 +316,12 @@ class ApexMQConnectionManager:
         else:
             print(f"Failed to fetch queues: {response.status_code}")
             return []
+
+    def get_connection(self):
+        if (
+            not hasattr(self.local, "connection")
+            or self.local.connection is None
+            or self.local.connection.is_closed
+        ):
+            self.local.connection = self.connect()
+        return self.local.connection
