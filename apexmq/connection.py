@@ -1,6 +1,7 @@
 import json
 import pika
 import time
+import threading
 from typing import Dict, List
 from pika.adapters.blocking_connection import BlockingChannel
 from pika.exceptions import AMQPConnectionError
@@ -122,7 +123,8 @@ class ApexMQChannelManager:
 
     def __init__(
         self,
-        connection: "ApexMQConnectionManager",
+        connection_manager: "ApexMQConnectionManager",
+        channel: BlockingChannel,
         channel_name: str,
         channel_config: dict,
     ):
@@ -133,13 +135,11 @@ class ApexMQChannelManager:
             connection (pika.BlockingConnection): The connection to RabbitMQ.
             channel_name (str): The name of the channel.
         """
-        self.connection = connection
+        self.connection_manager = connection_manager
+        self.channel = channel
         self.channel_name = channel_name
         self.channel_config = channel_config
-        self.channel = connection.connection.channel()
-        self.publish_channel = connection.connection.channel()
         self.queue_list: Dict[str, ApexMQQueueManager] = {}
-        self._channels_list[channel_name] = self
 
     @classmethod
     def get_channel(cls, channel_name):
@@ -176,9 +176,9 @@ class ApexMQChannelManager:
             body (dict): The message body.
             to (str): The name of the queue to publish the message to.
         """
-        properties = pika.BasicProperties(action)
+        properties = pika.BasicProperties(content_type=action)
         try:
-            self.publish_channel.basic_publish(
+            self.channel.basic_publish(
                 exchange="",
                 routing_key=to,
                 body=json.dumps(body),
@@ -186,6 +186,18 @@ class ApexMQChannelManager:
             )
         except Exception as e:
             error(f"Failed to publish message to {to}: {e}")
+            # Attempt to reconnect and retry
+            self.connection_manager.close_connection()
+            new_channel = self.connection_manager.create_channel(
+                self.channel_name, self.channel_config
+            )
+            self.channel = new_channel.channel
+            self.channel.basic_publish(
+                exchange="",
+                routing_key=to,
+                body=json.dumps(body),
+                properties=properties,
+            )
 
 
 class ApexMQConnectionManager:
@@ -208,6 +220,7 @@ class ApexMQConnectionManager:
             connection_name (str): The name of the connection configuration.
         """
         self.connection_name = connection_name
+        self.local = threading.local()
         self.connection_params = get_connection_params(connection_name)
         self.connection: pika.BlockingConnection = None
         self.channel_list: Dict[str, ApexMQChannelManager] = {}
@@ -236,41 +249,35 @@ class ApexMQConnectionManager:
         Raises:
             ConnectionError: If unable to connect to RabbitMQ.
         """
-        credentialis = pika.PlainCredentials(
+        credentials = pika.PlainCredentials(
             username=self.__USER__,
             password=self.__PASSWORD__,
         )
-        ssl_options = None
-        connected = False
-        error_msg = None
+
         for _ in range(self.__MAX_RETRIES__):
             try:
                 connection_params = pika.ConnectionParameters(
                     host=self.__HOST__,
                     port=self.__PORT__,
                     virtual_host=self.__VIRTUAL_HOST__,
-                    credentials=credentialis,
+                    credentials=credentials,
                     heartbeat=self.__HEARTBEAT__,
-                    retry_delay=self.__RETRY_DELAY__,
                     blocked_connection_timeout=self.__CONNECTION_TIMEOUT__,
-                    ssl_options=ssl_options,
                 )
-                self.connection = pika.BlockingConnection(connection_params)
-                connected = True
-                info(f"Connected to RabbitMQ: {self.connection_name}")
-                break
+                connection = pika.BlockingConnection(connection_params)
+                info(
+                    f"Connected to RabbitMQ: {self.connection_name} (Thread: {threading.current_thread().name})"
+                )
+                return connection
             except AMQPConnectionError as e:
-                error_msg = e
                 error(
-                    f"Failed to connect to messege queue server: {self.connection_name}"
+                    f"Failed to connect to message queue server: {self.connection_name}. Retrying..."
                 )
+                time.sleep(self.__RETRY_DELAY__)
 
-            time.sleep(self.__RETRY_DELAY__)
-        if not connected:
-            raise ConnectionError(
-                f"Failed to connect to messege queue server: {error_msg}"
-            )
-        return self.connection
+        raise ConnectionError(
+            f"Failed to connect to message queue server after {self.__MAX_RETRIES__} attempts"
+        )
 
     def create_channel(
         self, channel_name: str, channel_config: dict
@@ -287,21 +294,26 @@ class ApexMQConnectionManager:
         Raises:
             Exception: If the connection is not established.
         """
-        if not self.connection:
-            raise Exception("Connection not established. Call create_connection first.")
-
-        channel_manager = ApexMQChannelManager(self, channel_name, channel_config)
-
-        info(f"Channel {channel_name} created.")
+        connection = self.get_connection()
+        channel = connection.channel()
+        channel_manager = ApexMQChannelManager(
+            self, channel, channel_name, channel_config
+        )
+        info(
+            f"Channel {channel_name} created (Thread: {threading.current_thread().name})."
+        )
         return channel_manager
 
     def close_connection(self):
         """
         Closes the connection to RabbitMQ.
         """
-        if self.connection:
-            self.connection.close()
-            info("RabbitMQ connection closed")
+        if hasattr(self.local, "connection") and self.local.connection:
+            self.local.connection.close()
+            self.local.connection = None
+            info(
+                f"RabbitMQ connection closed (Thread: {threading.current_thread().name})"
+            )
 
     def get_queue_list_in_connection(self) -> List[str]:
         url = f"http://{self.__HOST__}:{self.__PORT__}/api/queues"
