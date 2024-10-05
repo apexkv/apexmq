@@ -120,7 +120,7 @@ class ApexMQChannelManager:
     """
 
     _channels_list: Dict[str, "ApexMQChannelManager"] = {}
-    _publish_channel: "ApexMQChannelManager" = None
+    _publish_channel: BlockingChannel = None
 
     def __init__(
         self,
@@ -142,7 +142,7 @@ class ApexMQChannelManager:
         self.channel_config = channel_config
         self.queue_list: Dict[str, ApexMQQueueManager] = {}
         self.publish_channel = connection_manager.get_connection().channel()
-        self._publish_channel = self
+        self._publish_channel = self.publish_channel
 
     @classmethod
     def get_publish_channel(cls):
@@ -174,7 +174,8 @@ class ApexMQChannelManager:
             return queue_manager
         return self.queue_list[queue_name]
 
-    def publish(self, action: str, body: dict, to: str):
+    @classmethod
+    def publish(cls, action: str, body: dict, to: str):
         """
         Publishes a message to the specified queue.
 
@@ -185,7 +186,7 @@ class ApexMQChannelManager:
         """
         properties = pika.BasicProperties(content_type=action)
         try:
-            self.publish_channel.basic_publish(
+            cls._publish_channel.basic_publish(
                 exchange="",
                 routing_key=to,
                 body=json.dumps(body),
