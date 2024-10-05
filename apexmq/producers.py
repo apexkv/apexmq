@@ -39,13 +39,8 @@ def publish(
         - This will broadcast a message with the action "user.create" and the body
           {"id": 1, "name": "John Doe"} to all queues in the connection.
     """
-    if not channel_name:
-        channel_name = get_first_channel_name()
 
-    channel_manager = ApexMQChannelManager.get_channel(channel_name)
-
-    if to == "broadcast":
-        to = channel_manager.connection.get_queue_list_in_connection()
+    channel_manager = ApexMQChannelManager.get_publish_channel()
 
     for publish_to in to:
         try:
