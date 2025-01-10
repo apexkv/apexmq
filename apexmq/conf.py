@@ -43,34 +43,16 @@ def get_connection_settings() -> dict:
         dict: The connection settings.
 
     Raises:
-        ImproperlyConfigured: If "CONNECTIONS" not in APEXMQ_SETTINGS.
+        ImproperlyConfigured: If "CONNECTION" not in APEXMQ_SETTINGS.
     """
+    KEY = "CONNECTION"
     # Fetch APEXMQ settings
     settings = get_apexmq_settings()
 
-    if "CONNECTIONS" not in settings:
-        raise ImproperlyConfigured("CONNECTIONS is not defined in APEXMQ_SETTINGS.")
+    if KEY not in settings:
+        raise ImproperlyConfigured(f"{KEY} is not defined in APEXMQ_SETTINGS.")
 
-    return settings["CONNECTIONS"]
-
-
-def get_exchange_settings() -> dict:
-    """
-    Retrieve the apexmq exchange settings from the APEXMQ_SETTINGS dictionary.
-
-    Returns:
-        dict: The exchange settings.
-
-    Raises:
-        ImproperlyConfigured: If "EXCHANGES" not in APEXMQ_SETTINGS.
-    """
-    # Fetch APEXMQ settings
-    settings = get_apexmq_settings()
-
-    if "EXCHANGES" not in settings:
-        raise ImproperlyConfigured("EXCHANGES is not defined in APEXMQ_SETTINGS.")
-
-    return settings["EXCHANGES"]
+    return settings[KEY]
 
 
 def get_connection_params(connection_name) -> dict:
@@ -142,37 +124,6 @@ def get_consumers_from_apps():
                 continue
 
     return consumers_dict
-
-
-def get_first_channel_name():
-    """
-    Retrieves the first channel name from the APEXMQ settings.
-
-    Returns:
-        str: The name of the first channel.
-
-    Raises:
-        ImproperlyConfigured: If no channels are defined in the APEXMQ settings.
-    """
-    # Fetch APEXMQ settings
-    settings = get_connection_settings()
-
-    # Get the first connection name
-    first_connection = settings[list(settings.keys())[0]]
-
-    connection_channel_list = first_connection.get("CHANNELS", None)
-
-    if not connection_channel_list:
-        raise ImproperlyConfigured(
-            "No channels found in the first connection in APEXMQ settings."
-        )
-
-    first_channel_name = list(connection_channel_list.keys())[0]
-
-    if not first_channel_name:
-        raise ImproperlyConfigured("No channels found in APEXMQ settings.")
-
-    return first_channel_name
 
 
 logger = logging.getLogger(__name__)
