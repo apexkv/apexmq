@@ -173,3 +173,4 @@ requirements.txt
 entrypoint.sh
 wait-for-it.sh
 .vscode
+.test_*.py
