@@ -60,7 +60,6 @@ def on_model_action(model: Model, send_to: List[str]):
     """
     def outer(func: Callable):
         def user_action(sender, instance, **kwargs):
-            print(instance.__dict__)
             created = kwargs.get("created", False)
             updated = not created if "created" in kwargs else False
             deleted = kwargs.get("deleted", False)
