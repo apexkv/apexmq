@@ -55,7 +55,6 @@ APEXMQ_SETTINGS = {
                     "EXCLUSIVE": False,  # optional
                     "PASSIVE": False,  # optional
                     "AUTO_DELETE": False,  # optional
-                    "AUTO_ACK": True,  # optional
                 }
             }
         }
