@@ -10,18 +10,18 @@ Freedom to Use
 You are free to use this software for personal and commercial purposes.
 
 Freedom to Modify
-You can modify the software to suit your needs.
+You can modify the software to suit your needs, subject to the conditions of this license.
 
 Freedom to Share
-You can distribute the original or modified versions of this software, but any modifications must also be shared under the same AGPL-3.0 license.
+You may distribute the original or modified versions of this software. However, any modifications you make must also be distributed under the same AGPL-3.0 license.
 
 Requirement to Share Changes
-If you modify this software and make it available over a network (such as a web service), you must make the modified source code publicly available under the same license.
+If you modify this software and make it available over a network (such as in the form of a web service), you are required to make the modified source code publicly available under the same AGPL-3.0 license.
 
 No Warranty
-This software is provided "as is," without any warranties, express or implied.
+This software is provided "as is," without any warranties, express or implied, including but not limited to the implied warranties of merchantability or fitness for a particular purpose.
 
-For full legal details, refer to the complete AGPL-3.0 License at https://www.gnu.org/licenses/agpl-3.0.en.html.
+For full legal details, please refer to the complete AGPL-3.0 License: AGPL-3.0 License.
 
 Contributor License Agreement (CLA)
 By contributing to ApexMQ, you agree to the following terms:
@@ -33,13 +33,13 @@ Assigning Rights
 By submitting your code, you grant Benthara Gamage Kavindu Harshitha the right to use, modify, and distribute your contribution as part of the project under the AGPL-3.0 license.
 
 Clean Submission
-Your submission should be clean, follow the repository’s code standards, and adhere to best practices. Contributions must be submitted via Pull Requests (PRs) to the contributors branch or the relevant feature branch, after proper discussion and approval of the feature request.
+Your submission should be clean, follow the repository’s code standards, and adhere to best practices. Contributions must be submitted via Pull Requests (PRs) to the relevant feature branch, after proper discussion and approval of the feature request.
 
 Feature Requests
-For new features, open an issue for discussion. Once approved, a specific branch will be created for you to work on and submit your code.
+For new features, please open an issue for discussion. Once the feature request is approved, a specific branch will be created for you to work on and submit your code.
 
 Review Process
-All contributions will be reviewed for quality and adherence to the project's contribution workflow (forking the repository, submitting PRs, etc.).
+All contributions will be reviewed for quality, relevance, and adherence to the project's contribution guidelines (forking the repository, submitting PRs, etc.).
 
 Attribution
 Your contributions will be attributed to you as the author. However, overall project ownership remains with Benthara Gamage Kavindu Harshitha.
@@ -49,6 +49,5 @@ Fork the repository on GitHub.
 Create a new branch for your feature or bug fix.
 Submit a Pull Request (PR) to the appropriate branch, following the contribution guidelines above.
 Your contribution will be reviewed and merged if it meets the project standards.
-
 Disclaimer
 This project is provided "as is," with no warranties or guarantees. By using or contributing to this software, you agree that Benthara Gamage Kavindu Harshitha is not liable for any damages or issues that arise from the use of the software.
