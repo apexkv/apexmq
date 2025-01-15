@@ -1,19 +1,13 @@
-import threading
-import time
-import importlib
+import sys, atexit, threading
 from django.apps import AppConfig
-from django.core.exceptions import ImproperlyConfigured
 from django.utils.autoreload import autoreload_started
 
-from .conf import get_connection_settings, get_consumers_from_apps, info, warning, error
-from .consumers import action_handlers
-from .connection import (
-    ApexMQConnectionManager,
-    ApexMQQueueManager,
-)
+from .conf import Logger
+from .connection import ApexMQManager, terminate_event
 
-thread_list = []
 
+threads = []
+threads_lock = threading.Lock()
 
 class ApexMQConfig(AppConfig):
     name = "apexmq"
@@ -26,14 +20,15 @@ class ApexMQConfig(AppConfig):
         """
         from django.conf import settings
 
-        self.autodiscover_consumers(settings)
-
-        self.register_on_consume_handlers()
+        if self.is_management_command_to_skip():
+            return
 
         if settings.DEBUG:
             self.watch_for_changes()
         else:
             self.setup_rabbitmq()
+
+        atexit.register(self.cleanup_threads)
 
     def watch_for_changes(self):
         """
@@ -42,29 +37,40 @@ class ApexMQConfig(AppConfig):
         """
         autoreload_started.connect(self.setup_rabbitmq)
 
-    def setup_rabbitmq(self, sender=None, **kwargs):
-        pass
+    def setup_rabbitmq(self, **kwargs):
+        manager = ApexMQManager()
+        manager_thread = threading.Thread(target=manager.ready, name="ManagerThread", daemon=True)
+        manager_thread.start()
+        global threads
+        with threads_lock:
+            threads.append(manager_thread)
 
-    def message_callback(self, channel, method, properties, body):
-        pass
-
-    def register_on_consume_handlers(self):
-        for action, handler in action_handlers.items():
-            pass
-
-    def autodiscover_consumers(self, settings):
+    def cleanup_threads(self):
         """
-        Automatically discovers and imports consumers from all installed apps.
-        This looks for a `consumers.py` file in each app listed in `INSTALLED_APPS`.
+        Ensures all RabbitMQ threads terminate gracefully when the application shuts down.
         """
-        for app in settings.INSTALLED_APPS:
-            if app != "apexmq":
-                try:
-                    # Dynamically import the consumers module from each installed app
-                    importlib.import_module(f"{app}.consumers")
-                except ModuleNotFoundError:
-                    # If the app doesn't have a consumers module, skip it
-                    pass
+        Logger.info("Shutting down RabbitMQ threads...")
+        terminate_event.set()  # Signal threads to terminate
 
-    def log_details(self, action, queue):
-        info(f'"CONSUMED - QUEUE: {queue} | ACTION: {action}"')
+        with threads_lock:
+            for thread in threads:
+                Logger.info(f"Waiting for thread {thread.name} to terminate...")
+                thread.join(timeout=5)
+
+        Logger.info("All RabbitMQ threads shut down.")
+
+    @staticmethod
+    def is_management_command_to_skip():
+        """
+        Determines if the current management command should skip RabbitMQ setup.
+        Returns True for commands like `makemigrations`, `migrate`, `collectstatic`, etc.
+        """
+        management_commands_to_skip = [
+            "makemigrations",
+            "migrate",
+            "collectstatic",
+            "test",
+            "shell",
+            "createsuperuser",
+        ]
+        return len(sys.argv) > 1 and sys.argv[1] in management_commands_to_skip
