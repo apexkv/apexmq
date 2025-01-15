@@ -1,30 +1,368 @@
-import json
+import time, json, threading
+from typing import Dict
 import pika
-import time
-import threading
-from typing import Dict, List
-from pika.adapters.blocking_connection import BlockingChannel
+from pika.adapters.blocking_connection import BlockingChannel, BlockingConnection
 from pika.exceptions import AMQPConnectionError
 from django.core.exceptions import ImproperlyConfigured
 
-from .conf import get_connection_params, info, error
+from .conf import Logger, get_connection_settings
+from .consumers import get_consumers_from_apps, BaseConsumer
 
-class ApexMQQueueManager:
-    pass
 
-class ApexMQChannelManager:
-    pass
+terminate_event = threading.Event()
+
 
 class ApexMQConnection:
+    """
+    A class to manage the connection to RabbitMQ.
+
+    Attributes:
+        connection (BlockingConnection): The connection object to RabbitMQ.
+        params (ApexMQSettingsConnection): The connection settings.
+        credentials (pika.PlainCredentials): The credentials to authenticate with Rabbit
+
+    Methods:
+        connect: Establishes a connection to RabbitMQ.    
+    """
     def __init__(self):
-        self.connect()
+        self.connection:BlockingConnection|None = None
+        self.params = get_connection_settings()
+        self.credentials = pika.PlainCredentials(
+            self.params.user,
+            self.params.password,
+        )
 
     def connect(self):
-        pass
+        """
+        Establishes a connection to RabbitMQ.
+
+        Raises:
+            ImproperlyConfigured: If the connection could not be established after multiple retries.
+        
+        Notes:
+            - The connection is established using the BlockingConnection class from the pika library.
+            - The connection parameters are fetched from the APEXMQ settings.
+            - The connection is retried multiple times in case of failure.
+        """
+        retries = self.params.retries
+        WAIT_TIME = 3
+        while retries > 0:
+            try:
+                connection = pika.BlockingConnection(
+                    pika.ConnectionParameters(
+                        self.params.host,
+                        credentials=self.credentials,
+                        heartbeat=0
+                    )
+                )
+                self.connection = connection
+                Logger.info("Successfully connected to RabbitMQ.")
+                break
+            except AMQPConnectionError as e:
+                Logger.error(f"Failed to connect to RabbitMQ: {e}. Retrying in {WAIT_TIME} seconds...")
+            except Exception as e:
+                Logger.error(f"Unexpected error: {e}")
+            retries -= 1
+            time.sleep(WAIT_TIME)
+
+        if retries == 0 and self.connection is None:
+            raise ImproperlyConfigured("Could not establish a RabbitMQ connection after multiple retries.")
 
 
-class ApexMQConnectionManager:
-    connection: ApexMQConnection = None
+class ApexMQProducerManager:
+    # comment out the following class
+    """
+    A class to manage the RabbitMQ producer.
+
+    Attributes:
+        connection (ApexMQConnection): The connection to RabbitMQ.
+        channel (BlockingChannel): The channel for the producer.
+
+    Methods:
+        connect: Establishes a connection to RabbitMQ.
+        ready: Creates a channel for the producer.
+        create_channel: Creates a channel for the producer.
+        publish: Publishes a message to a specified queue.
     
-    def __init__(self, connection_params: Dict):
-        self.connection = ApexMQConnection()
+    Notes:
+        - The producer uses the default exchange and routing key to publish messages.
+        - The message content type is set to the action type.
+    """
+    connection = ApexMQConnection()
+    channel:BlockingChannel|None = None
+
+    @classmethod
+    def connect(cls):
+        """
+        Establishes a connection to RabbitMQ. 
+
+        Raises:
+            ImproperlyConfigured: If the connection could not be established.
+        """
+        cls.connection.connect()
+
+    @classmethod
+    def ready(cls):
+        """
+        Creates a channel for the producer.
+
+        Raises:
+            ImproperlyConfigured: If the RabbitMQ connection is not established.
+        """
+        cls.create_channel()
+
+    @classmethod
+    def create_channel(cls):
+        """
+        Creates a channel for the producer.
+
+        Raises:
+            ImproperlyConfigured: If the RabbitMQ connection is not established.
+        """
+        if cls.connection.connection is None:
+            raise ImproperlyConfigured("RabbitMQ connection is not established.")   
+        
+        cls.channel = cls.connection.connection.channel()
+
+        Logger.info("Producer channel created.")
+
+    @classmethod
+    def publish(cls, action: str, body: dict, to: str):    
+        """
+        Publishes a message to a specified queue.
+
+        Args:
+            action (str): The action type of the message.
+            body (dict): The message body as a dictionary.
+            to (str): The name of the queue to publish the message to.
+        
+        Raises:
+            Exception: If the message could not be published.
+        
+        Notes:
+            - The message is published using the `basic_publish` method of the channel.
+            - The message content type is set to the action type.
+        """  
+        try:
+            cls.channel.basic_publish(
+                exchange="",
+                routing_key=to,
+                body=json.dumps(body),
+                properties=pika.BasicProperties(content_type=action)
+            )
+            Logger.info(f'"PUBLISHED - QUEUE: {to} | ACTION: {action}"')
+        except Exception as e:
+            Logger.error(f"Failed to publish message to {to}: {e}")
+        
+
+    
+
+class ApexMQConsumerManager:
+    """
+    A class to manage the RabbitMQ consumer.
+
+    Attributes:
+        connection (ApexMQConnection): The connection to RabbitMQ.
+        channel (BlockingChannel): The channel for the consumer.
+        queue_params (Dict[str, ApexMQQueue]): The queue parameters.
+        consumers (Dict[str, BaseConsumer]): The consumer classes.
+
+    Methods:
+        connect: Establishes a connection to RabbitMQ.
+        ready: Creates a channel, declares queues, and starts consuming messages.
+        create_channel: Creates a channel for the consumer.
+        declare_queues: Declares the queues based on the queue parameters.
+        callback: The callback function to process consumed messages.
+        consume: Starts consuming messages from the queues.
+        start_consuming: Starts the consuming process.
+        stop_consuming: Stops the consuming process.
+    
+    Notes:
+        - The consumer uses the `basic_consume` method to consume messages from the queues.
+        - The callback function processes the consumed messages based on the action type.
+        - The consumer uses the `consumers` dictionary to map action types to consumer classes.
+    """
+    connection = ApexMQConnection()
+
+    def __init__(self):
+        """
+        Initializes the RabbitMQ consumer manager.
+
+        Attributes:
+            channel (BlockingChannel): The channel for the consumer.
+            queue_params (Dict[str, ApexMQQueue]): The queue parameters.
+            consumers (Dict[str, BaseConsumer]): The consumer classes.
+
+        Notes:
+            - The queue parameters are fetched from the APEXMQ settings.
+            - The consumer classes are fetched from the installed apps.
+            - The `consumers` dictionary maps action types to consumer classes.
+        """
+        self.channel:BlockingChannel|None = None
+        self.queue_params = get_connection_settings().queue
+        self.consumers:Dict[str, BaseConsumer] = get_consumers_from_apps()
+    
+    def connect(self):
+        """
+        Establishes a connection to RabbitMQ.
+
+        Raises:
+            ImproperlyConfigured: If the connection could not be established.
+        """
+        self.connection.connect()
+
+    def ready(self):
+        """
+        Creates a channel, declares queues, and starts consuming messages.
+
+        Raises:
+            ImproperlyConfigured: If the RabbitMQ connection is not established.
+
+        Notes:
+            - The method calls the `create_channel`, `declare_queues`, `consume`, and `start_consuming' methods.
+            - The consumer starts consuming messages after the connection is established.
+            - The method logs the start of the consuming process.
+            - The method is called after the connection is established.
+        """
+        self.create_channel()
+        self.declare_queues()
+        self.consume()
+        self.start_consuming()
+
+    def create_channel(self):
+        """
+        Creates a channel for the consumer.
+
+        Raises:
+            ImproperlyConfigured: If the RabbitMQ connection is not established.
+        """
+        if self.connection.connection is None:
+            raise ImproperlyConfigured("RabbitMQ connection is not established.")   
+        self.channel = self.connection.connection.channel()
+
+    def declare_queues(self):
+        """
+        Declares the queues based on the queue parameters.
+
+        Notes:
+            - The method iterates over the queue parameters and calls the `model_dump` method to get the queue data.
+            - The method declares the queue using the `queue_declare` method of the channel.
+            - The method logs the declaration of each queue.
+        """
+        for queue_name, queue_params in self.queue_params.items():
+            data = queue_params.model_dump()
+            self.channel.queue_declare(queue=queue_name, **data)
+            Logger.info(f"Queue declared: {queue_name}")
+
+    def callback(self, channel, method, properties, body):
+        """
+        The callback function to process consumed messages.
+
+        Args:
+            channel (BlockingChannel): The channel object.
+            method (pika.spec.Basic.Deliver): The method object.
+            properties (pika.spec.BasicProperties): The properties object.
+            body (bytes): The message body as bytes.
+
+        Notes:
+            - The method extracts the action type and queue name from the properties and method objects.
+            - The method logs the consumption of the message.
+            - The method looks up the action type in the `consumers` dictionary to find the consumer class.
+            - The method calls the consumer class with the action type and message body.
+            - If no handler is found for the action type, a warning message is printed.
+        """
+        action_type = str(properties.content_type)
+        queue_name = method.routing_key
+
+        Logger.info(f'"CONSUMED - QUEUE: {queue_name} | ACTION: {action_type}"')
+
+        lookup_prefix = action_type.split(".")[0]
+
+        if lookup_prefix in self.consumers:
+            ConsumerClass = self.consumers[lookup_prefix]
+            try:
+                ConsumerClass(action_type, body)
+            except Exception as e:
+                Logger.error(f"Failed to process consumer action: {e}")
+        else:
+            Logger.warning(f"No handler found for the action type: {action_type}")
+
+    def consume(self):
+        """
+        Starts consuming messages from the queues.
+
+        Notes:
+            - The method iterates over the queue parameters and calls the `basic_consume` method of the channel.
+            - The method sets the `on_message_callback` to the `callback` method.
+            - The method sets `auto_ack` to `True` to automatically acknowledge messages after consumption.
+        """
+        for queue_name in self.queue_params.keys():
+            self.channel.basic_consume(
+                queue=queue_name,
+                on_message_callback=self.callback,
+                auto_ack=True
+            )
+    
+    def start_consuming(self):
+        """
+        Starts the consuming process.
+
+        Notes:
+            - The method logs the start of the consuming process.
+            - The method calls the `start_consuming` method of the channel to begin consuming messages.
+        """
+        Logger.info("Started consuming messages.")
+        self.channel.start_consuming()
+
+
+class ApexMQManager:   
+    """
+    A class to manage the RabbitMQ connections and channels.
+
+    Attributes:
+        producer (ApexMQProducerManager): The producer manager.
+        consumer (ApexMQConsumerManager): The consumer manager.
+
+    Methods:
+        connect: Establishes connections to RabbitMQ for the producer and consumer.
+        ready: Starts the producer and consumer managers.
+
+    Notes:
+        - The manager class initializes the producer and consumer managers.
+        - The manager class starts the producer and consumer managers.
+    """ 
+    def __init__(self):
+        self.producer = ApexMQProducerManager()
+        self.consumer = ApexMQConsumerManager()        
+
+    def connect(self):
+        def connect_producer():
+            while not terminate_event.is_set():
+                try:
+                    self.producer.connect()
+                    Logger.info("Producer connected.")
+                    break
+                except Exception as e:
+                    Logger.error(f"Failed to connect to producer: {e}")
+                time.sleep(3)
+            self.producer.ready()
+        
+        def connect_consumer():
+            while not terminate_event.is_set():
+                try:
+                    self.consumer.connect()
+                    Logger.info("Consumer connected.")
+                    break
+                except Exception as e:
+                    Logger.error(f"Failed to connect to consumer: {e}")
+                time.sleep(3)
+            self.consumer.ready()
+
+        channel_thread = threading.Thread(target=connect_producer, name="ProducerThread", daemon=True)
+        queue_thread = threading.Thread(target=connect_consumer, name="ConsumerThread", daemon=True)
+
+        channel_thread.start()
+        queue_thread.start()
+
+    def ready(self):
+        self.connect()
