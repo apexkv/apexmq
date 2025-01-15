@@ -32,7 +32,6 @@ class ApexMQSettingsQueue(BaseModel):
     exclusive: bool = False
     passive: bool = False
     auto_delete: bool = False
-    auto_ack: bool = False
 
 
 class ApexMQSettingsConnection(BaseModel):
