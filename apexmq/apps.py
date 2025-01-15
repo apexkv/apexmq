@@ -3,7 +3,7 @@ from django.apps import AppConfig
 from django.utils.autoreload import autoreload_started
 
 from .conf import Logger
-from .connection import ApexMQManager, terminate_event
+from .connection import ApexMQManager
 
 
 threads = []
@@ -38,8 +38,8 @@ class ApexMQConfig(AppConfig):
         autoreload_started.connect(self.setup_rabbitmq)
 
     def setup_rabbitmq(self, **kwargs):
-        manager = ApexMQManager()
-        manager_thread = threading.Thread(target=manager.ready, name="ManagerThread", daemon=True)
+        self.manager = ApexMQManager()
+        manager_thread = threading.Thread(target=self.manager.ready, name="ManagerThread", daemon=True)
         manager_thread.start()
         global threads
         with threads_lock:
@@ -49,12 +49,9 @@ class ApexMQConfig(AppConfig):
         """
         Ensures all RabbitMQ threads terminate gracefully when the application shuts down.
         """
-        Logger.info("Shutting down RabbitMQ threads...")
-        terminate_event.set()  # Signal threads to terminate
 
         with threads_lock:
             for thread in threads:
-                Logger.info(f"Waiting for thread {thread.name} to terminate...")
                 thread.join(timeout=5)
 
         Logger.info("All RabbitMQ threads shut down.")

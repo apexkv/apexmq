@@ -1,4 +1,4 @@
-import time, json, threading
+import time, json, threading, atexit
 from typing import Dict
 import pika
 from pika.adapters.blocking_connection import BlockingChannel, BlockingConnection
@@ -7,9 +7,6 @@ from django.core.exceptions import ImproperlyConfigured
 
 from .conf import Logger, get_connection_settings
 from .consumers import get_consumers_from_apps, BaseConsumer
-
-
-terminate_event = threading.Event()
 
 
 class ApexMQConnection:
@@ -70,7 +67,6 @@ class ApexMQConnection:
 
 
 class ApexMQProducerManager:
-    # comment out the following class
     """
     A class to manage the RabbitMQ producer.
 
@@ -110,6 +106,7 @@ class ApexMQProducerManager:
             ImproperlyConfigured: If the RabbitMQ connection is not established.
         """
         cls.create_channel()
+        atexit.register(cls.close)
 
     @classmethod
     def create_channel(cls):
@@ -123,8 +120,6 @@ class ApexMQProducerManager:
             raise ImproperlyConfigured("RabbitMQ connection is not established.")   
         
         cls.channel = cls.connection.connection.channel()
-
-        Logger.info("Producer channel created.")
 
     @classmethod
     def publish(cls, action: str, body: dict, to: str):    
@@ -153,8 +148,48 @@ class ApexMQProducerManager:
             Logger.info(f'"PUBLISHED - QUEUE: {to} | ACTION: {action}"')
         except Exception as e:
             Logger.error(f"Failed to publish message to {to}: {e}")
-        
+    
+    @classmethod
+    def close_channel(cls):
+        """
+        Closes the channel.
 
+        Notes:
+            - The method logs the closing of the channel.
+            - The method calls the `close` method of the channel to close the channel.
+        """
+        try:
+            cls.channel.close()
+            Logger.info("Closing producer channel.")
+        except Exception as e:
+            Logger.error(f"Error closing producer channel: {e}")
+
+    @classmethod
+    def close_connection(cls):
+        """
+        Closes the connection.
+
+        Notes:
+            - The method logs the closing of the connection.
+            - The method calls the `close` method of the connection to close the connection.
+        """
+        if cls.connection.connection and cls.connection.connection.is_open:
+            try:
+                cls.connection.connection.close()
+                Logger.info("Closing producer connection.")
+            except Exception as e:
+                Logger.error(f"Error closing producer connection: {e}")
+
+    @classmethod
+    def close(cls):
+        """
+        Closes the channel and connection.
+
+        Notes:
+            - The method calls the `close_channel` and `close_connection` methods to close the channel and connection.
+        """
+        cls.close_channel()
+        cls.close_connection()
     
 
 class ApexMQConsumerManager:
@@ -201,6 +236,7 @@ class ApexMQConsumerManager:
         self.channel:BlockingChannel|None = None
         self.queue_params = get_connection_settings().queue
         self.consumers:Dict[str, BaseConsumer] = get_consumers_from_apps()
+        atexit.register(self.close)
     
     def connect(self):
         """
@@ -311,8 +347,77 @@ class ApexMQConsumerManager:
             - The method logs the start of the consuming process.
             - The method calls the `start_consuming` method of the channel to begin consuming messages.
         """
-        Logger.info("Started consuming messages.")
         self.channel.start_consuming()
+        Logger.info("Started consuming messages.")
+
+    def cancel_consuming(self):
+        """
+        Cancels the consuming process.
+
+        Notes:
+            - The method logs the cancel of the consuming process.
+            - The method calls the `basic_cancel` method of the channel to cancel consuming messages.
+        """
+        try:
+            self.channel.basic_cancel("consumer")
+            Logger.info("Cancelling consuming messages.")
+        except Exception as e:
+            Logger.error(f"Error cancelling consuming: {e}")
+
+    def stop_consuming(self):
+        """
+        Stops the consuming process.
+
+        Notes:
+            - The method logs the stop of the consuming process.
+            - The method calls the `stop_consuming` method of the channel to stop consuming messages.
+        """
+        try:
+            self.channel.stop_consuming()
+            Logger.info("Stopping consuming messages.")
+        except Exception as e:
+            Logger.error(f"Error stopping consuming: {e}")
+
+    def close_channel(self):
+        """
+        Closes the channel.
+
+        Notes:
+            - The method logs the closing of the channel.
+            - The method calls the `close` method of the channel to close the channel.
+        """
+        try:
+            self.channel.close()
+            Logger.info("Closing cosumer channel.")
+        except Exception as e:
+            Logger.error(f"Error closing cosumer channel: {e}")
+
+    def close_connection(self):
+        """
+        Closes the connection.
+
+        Notes:
+            - The method logs the closing of the connection.
+            - The method calls the `close` method of the connection to close the connection.
+        """
+        if self.connection.connection and self.connection.connection.is_open:
+            try:
+                self.connection.connection.close()
+                Logger.info("Closing cosumer connection.")
+            except Exception as e:
+                Logger.error(f"Error closing cosumer connection: {e}")
+
+    def close(self):
+        """
+        Closes the channel and connection.
+
+        Notes:
+            - The method calls the `close_channel` and `close_connection` methods to close the channel and connection.
+        """
+        self.cancel_consuming()
+        self.stop_consuming()
+        self.close_channel()
+        self.close_connection()
 
 
 class ApexMQManager:   
@@ -333,14 +438,21 @@ class ApexMQManager:
     """ 
     def __init__(self):
         self.producer = ApexMQProducerManager()
-        self.consumer = ApexMQConsumerManager()        
+        self.consumer = ApexMQConsumerManager()
+        # atexit.register(self.close)
 
     def connect(self):
+        """
+        Establishes connections to RabbitMQ for the producer and consumer.
+
+        Notes:
+            - The method starts the producer and consumer threads.
+            - The method logs the successful connection to RabbitMQ.
+        """
         def connect_producer():
-            while not terminate_event.is_set():
+            while True:
                 try:
                     self.producer.connect()
-                    Logger.info("Producer connected.")
                     break
                 except Exception as e:
                     Logger.error(f"Failed to connect to producer: {e}")
@@ -348,21 +460,41 @@ class ApexMQManager:
             self.producer.ready()
         
         def connect_consumer():
-            while not terminate_event.is_set():
+            while True:
                 try:
                     self.consumer.connect()
-                    Logger.info("Consumer connected.")
                     break
                 except Exception as e:
                     Logger.error(f"Failed to connect to consumer: {e}")
                 time.sleep(3)
             self.consumer.ready()
 
-        channel_thread = threading.Thread(target=connect_producer, name="ProducerThread", daemon=True)
-        queue_thread = threading.Thread(target=connect_consumer, name="ConsumerThread", daemon=True)
+        self.producer_thread = threading.Thread(target=connect_producer, name="ProducerThread", daemon=True)
+        self.consumer_thread = threading.Thread(target=connect_consumer, name="ConsumerThread", daemon=True)
 
-        channel_thread.start()
-        queue_thread.start()
+        self.producer_thread.start()
+        self.consumer_thread.start()
 
     def ready(self):
+        """
+        Starts the producer and consumer managers.
+
+        Notes:
+            - The method establishes connections to RabbitMQ for the producer and consumer.
+        """
         self.connect()
+
+    def close(self):
+        """
+        Closes the producer and consumer managers.
+
+        Notes:
+            - The method calls the `close` method of the producer and consumer managers.
+        """
+        self.producer.close()
+        self.consumer.close()
+
+        self.producer_thread.join(timeout=5)
+        self.consumer_thread.join(timeout=5)
+
+        Logger.info("Closed producer and consumer managers.")
