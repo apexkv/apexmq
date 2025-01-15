@@ -1,19 +1,14 @@
-import logging
-from functools import wraps
-from typing import Callable, List, Literal
+from typing import Callable, List
 from django.db.models import Model
 from django.db.models.signals import post_save, post_delete
 
-from .conf import get_first_channel_name, info
-from .connection import ApexMQChannelManager
-
-logger = logging.getLogger(__name__)
+from .connection import ApexMQProducerManager
 
 
 def publish(
     action: str,
     body: dict,
-    to: List[str] | Literal["broadcast"],
+    to: List[str]
 ):
     """
     Publishes a message to the specified queue(s) with the given action and body.
@@ -39,8 +34,43 @@ def publish(
           {"id": 1, "name": "John Doe"} to all queues in the connection.
     """
     for publish_to in to:
-        try:
-            ApexMQChannelManager.publish(action, body, publish_to)
-            info(f'"PUBLISHED - QUEUE: {publish_to} | ACTION: {action}"')
-        except Exception as e:
-            logger.error(f"Failed to publish message to {publish_to}: {e}")
+        ApexMQProducerManager.publish(action, body, publish_to)
+
+
+def on_model_action(model: Model, send_to: List[str]):
+    """
+    A decorator that listens for post_save and post_delete signals on a specified model.
+
+    Args:
+        model (Model): The model to listen for signals on.
+        send_to (List[str]): A list of queue names to send the message to.
+
+    Returns:
+        Callable: The decorated function.
+
+    Usage:
+        @on_model_action(User, ["user"])
+        def user_action(instance, created, updated, deleted):
+            if created:
+                return "user.create", {"id": instance.id, "name": instance.name}
+            elif updated:
+                return "user.update", {"id": instance.id, "name": instance.name}
+            elif deleted:
+                return "user.delete", {"id": instance.id}
+    """
+    def outer(func: Callable):
+        def user_action(sender, instance, **kwargs):
+            print(instance.__dict__)
+            created = kwargs.get("created", False)
+            updated = not created if "created" in kwargs else False
+            deleted = kwargs.get("deleted", False)
+
+            action, body = func(instance, created, updated, deleted)
+
+            publish(action, body, send_to)
+
+        post_save.connect(user_action, sender=model, dispatch_uid=f"{model.__name__}_post_save")
+        post_delete.connect(user_action, sender=model, dispatch_uid=f"{model.__name__}_post_delete")
+
+        return func
+    return outer
