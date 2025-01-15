@@ -1,9 +1,47 @@
-import json
-import logging
-from typing import Dict
+import json, inspect, importlib
+from django.apps import apps
 from django.core.exceptions import ImproperlyConfigured
+from .conf import Logger, APP_NAME
 
-logger = logging.getLogger(__name__)
+
+def get_consumers_from_apps():
+    """
+    Retrieves all consumer classes that are subclasses of BaseConsumer from the consumers.py files of installed apps.
+
+    Returns:
+        list: A list of the consumer classes.
+
+    Notes:
+        - Iterates over all installed apps and attempts to import their consumers.py module.
+        - If the module contains classes that are subclasses of BaseConsumer, they are added to the result.
+    """
+    consumers = {}
+    FILE_NAME = "consumers"
+
+    # Iterate over all installed apps
+    for app_config in apps.get_app_configs():
+        if app_config.name != APP_NAME:
+            try:
+                # Construct the path to the consumer.py file in the app
+                module_path = f"{app_config.name}.{FILE_NAME}"
+
+                # Dynamically import the consumer.py module
+                module = importlib.import_module(module_path)
+
+                class_list = inspect.getmembers(module, inspect.isclass)
+
+                for name, classobject in class_list:
+                    if issubclass(classobject, BaseConsumer) and classobject != BaseConsumer:
+                        consumers[classobject.lookup_prefix] = classobject
+
+            except ModuleNotFoundError:
+                # Skip if the app doesn't have a consumers.py file
+                continue
+            except Exception as e:
+                continue
+    
+    return consumers
+
 
 
 class BaseConsumer:
@@ -16,7 +54,7 @@ class BaseConsumer:
 
     lookup_prefix = None
 
-    def process_messege(self, action: str, data):
+    def __init__(self, action: str, data):
         """
         Processes a message based on the action type and data.
 
@@ -33,6 +71,8 @@ class BaseConsumer:
             - If they match, the method corresponding to the remaining parts of the `action` is called.
             - If no matching method is found, a message is printed.
         """
+        self.method_found = False
+
         # Ensure the consumer has a configured lookup prefix
         if not self.lookup_prefix:
             raise ImproperlyConfigured("Need to configure lookup_prefix.")
@@ -48,44 +88,12 @@ class BaseConsumer:
             # Call the method if it exists and is callable
             if callable(method):
                 method(json.loads(data))
+                self.method_found = True
             else:
-                msg = f"New action detected. Cannot find handling method for,\nAction: {action}"
-                logger.warning(msg)
+                msg = f"New action detected. Cannot find handling method in {self.__class__.__name__} for Action: {action}"
+                Logger.warning(msg)
         else:
-            msg = f"New action detected. Cannot find handling method for,\nAction: {action}"
-            logger.warning(msg)
-
-
-action_handlers = {}
-
-
-def on_consume(action):
-    """
-    Decorator to register a function as a handler for a specific action.
-
-    This decorator registers the decorated function in the global `action_handlers` dictionary
-    with the specified action as the key. The function will be called with the provided data
-    when the action is triggered.
-
-    Args:
-        action (str): The action type to register the handler for.
-
-    Returns:
-        function: The inner function that wraps the original function.
-
-    Example:
-        @on_consume("user.created")
-        def user_create(data: dict):
-            # Handle user.created action
-            pass
-    """
-
-    def wrapper(f):
-        action_handlers[action] = f
-
-        def inner(data):
-            f(data)
-
-        return inner
-
-    return wrapper
+            msg = f"New action detected. Cannot find handling method in {self.__class__.__name__} for Action: {action}"
+            Logger.warning(msg)
+        
+        
