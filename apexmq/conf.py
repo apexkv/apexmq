@@ -44,6 +44,7 @@ class ApexMQSettingsConnection(BaseModel):
         DEFAULT_QUEUE_NAME: ApexMQSettingsQueue()
     }
     retries: int = 5
+    heartbeat: int = 60
 
 
 def get_apexmq_settings() -> dict:

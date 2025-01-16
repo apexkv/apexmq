@@ -2,7 +2,7 @@ import time, json, threading, atexit
 from typing import Dict
 import pika
 from pika.adapters.blocking_connection import BlockingChannel, BlockingConnection
-from pika.exceptions import AMQPConnectionError
+from pika.exceptions import AMQPConnectionError, ChannelClosedByBroker
 from django.core.exceptions import ImproperlyConfigured
 
 from .conf import Logger, get_connection_settings
@@ -158,11 +158,11 @@ class ApexMQProducerManager:
             - The method logs the closing of the channel.
             - The method calls the `close` method of the channel to close the channel.
         """
-        try:
-            cls.channel.close()
-            Logger.info("Closing producer channel.")
-        except Exception as e:
-            Logger.error(f"Error closing producer channel: {e}")
+        if cls.channel and cls.channel.is_open:
+            try:
+                cls.channel.close()
+            except Exception as e:
+                Logger.error(f"Error closing producer channel: {e}")
 
     @classmethod
     def close_connection(cls):
@@ -176,7 +176,6 @@ class ApexMQProducerManager:
         if cls.connection.connection and cls.connection.connection.is_open:
             try:
                 cls.connection.connection.close()
-                Logger.info("Closing producer connection.")
             except Exception as e:
                 Logger.error(f"Error closing producer connection: {e}")
 
@@ -188,8 +187,12 @@ class ApexMQProducerManager:
         Notes:
             - The method calls the `close_channel` and `close_connection` methods to close the channel and connection.
         """
-        cls.close_channel()
-        cls.close_connection()
+        try:
+            cls.close_channel()
+            cls.close_connection()
+            Logger.info("Closed producer channel and connection.")
+        except Exception as e:
+            Logger.error(f"Error closing producer: {e}")
     
 
 class ApexMQConsumerManager:
@@ -350,20 +353,6 @@ class ApexMQConsumerManager:
         self.channel.start_consuming()
         Logger.info("Started consuming messages.")
 
-    def cancel_consuming(self):
-        """
-        Cancels the consuming process.
-
-        Notes:
-            - The method logs the cancel of the consuming process.
-            - The method calls the `basic_cancel` method of the channel to cancel consuming messages.
-        """
-        try:
-            self.channel.basic_cancel("consumer")
-            Logger.info("Cancelling consuming messages.")
-        except Exception as e:
-            Logger.error(f"Error cancelling consuming: {e}")
-
     def stop_consuming(self):
         """
         Stops the consuming process.
@@ -372,11 +361,14 @@ class ApexMQConsumerManager:
             - The method logs the stop of the consuming process.
             - The method calls the `stop_consuming` method of the channel to stop consuming messages.
         """
-        try:
-            self.channel.stop_consuming()
-            Logger.info("Stopping consuming messages.")
-        except Exception as e:
-            Logger.error(f"Error stopping consuming: {e}")
+        if self.channel.is_open:
+            try:
+                self.channel.stop_consuming()
+                Logger.info("Stopping consuming messages.")
+            except ChannelClosedByBroker as e:
+                Logger.error(f"Channel closed by broker: {e}")
+            except Exception as e:
+                Logger.error(f"Error stopping consuming: {e}")
 
     def close_channel(self):
         """
@@ -386,11 +378,12 @@ class ApexMQConsumerManager:
             - The method logs the closing of the channel.
             - The method calls the `close` method of the channel to close the channel.
         """
-        try:
-            self.channel.close()
-            Logger.info("Closing cosumer channel.")
-        except Exception as e:
-            Logger.error(f"Error closing cosumer channel: {e}")
+        if self.channel and self.channel.is_open:
+            try:
+                self.channel.close()
+                Logger.info("Closing cosumer channel.")
+            except Exception as e:
+                Logger.error(f"Error closing cosumer channel: {e}")
 
     def close_connection(self):
         """
@@ -414,7 +407,6 @@ class ApexMQConsumerManager:
         Notes:
             - The method calls the `close_channel` and `close_connection` methods to close the channel and connection.
         """
-        self.cancel_consuming()
         self.stop_consuming()
         self.close_channel()
         self.close_connection()
@@ -439,7 +431,6 @@ class ApexMQManager:
     def __init__(self):
         self.producer = ApexMQProducerManager()
         self.consumer = ApexMQConsumerManager()
-        # atexit.register(self.close)
 
     def connect(self):
         """
@@ -491,10 +482,11 @@ class ApexMQManager:
         Notes:
             - The method calls the `close` method of the producer and consumer managers.
         """
-        self.producer.close()
-        self.consumer.close()
 
-        self.producer_thread.join(timeout=5)
-        self.consumer_thread.join(timeout=5)
+        try:
+            # self.producer_thread.join(timeout=1)
+            self.consumer_thread.join(timeout=1)
+        except Exception as e:
+            Logger.error(f"Error closing threads: {e}")
 
         Logger.info("Closed producer and consumer managers.")
