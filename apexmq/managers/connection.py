@@ -1,0 +1,63 @@
+import time, pika
+from pika.adapters.blocking_connection import BlockingConnection
+from pika.exceptions import AMQPConnectionError
+from django.core.exceptions import ImproperlyConfigured
+
+from apexmq.conf import Logger, get_connection_settings
+
+
+class ApexMQConnectionManager:
+    """
+    A class to manage the connection to RabbitMQ.
+
+    Attributes:
+        connection (BlockingConnection): The connection object to RabbitMQ.
+        params (ApexMQSettingsConnection): The connection settings.
+        credentials (pika.PlainCredentials): The credentials to authenticate with Rabbit
+
+    Methods:
+        connect: Establishes a connection to RabbitMQ.    
+    """
+    def __init__(self):
+        self.connection:BlockingConnection|None = None
+        self.params = get_connection_settings()
+        self.credentials = pika.PlainCredentials(
+            self.params.user,
+            self.params.password,
+        )
+
+    def connect(self):
+        """
+        Establishes a connection to RabbitMQ.
+
+        Raises:
+            ImproperlyConfigured: If the connection could not be established after multiple retries.
+        
+        Notes:
+            - The connection is established using the BlockingConnection class from the pika library.
+            - The connection parameters are fetched from the APEXMQ settings.
+            - The connection is retried multiple times in case of failure.
+        """
+        retries = self.params.retries
+        WAIT_TIME = 3
+        while retries > 0:
+            try:
+                connection = pika.BlockingConnection(
+                    pika.ConnectionParameters(
+                        self.params.host,
+                        credentials=self.credentials,
+                        heartbeat=0
+                    )
+                )
+                self.connection = connection
+                Logger.info("Successfully connected to RabbitMQ.")
+                break
+            except AMQPConnectionError as e:
+                Logger.error(f"Failed to connect to RabbitMQ: {e}. Retrying in {WAIT_TIME} seconds...")
+            except Exception as e:
+                Logger.error(f"Unexpected error: {e}")
+            retries -= 1
+            time.sleep(WAIT_TIME)
+
+        if retries == 0 and self.connection is None:
+            raise ImproperlyConfigured("Could not establish a RabbitMQ connection after multiple retries.")
