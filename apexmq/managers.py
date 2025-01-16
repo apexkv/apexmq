@@ -9,7 +9,7 @@ from .conf import Logger, get_connection_settings
 from .consumers import get_consumers_from_apps, BaseConsumer
 
 
-class ApexMQConnection:
+class ApexMQConnectionManager:
     """
     A class to manage the connection to RabbitMQ.
 
@@ -84,7 +84,7 @@ class ApexMQProducerManager:
         - The producer uses the default exchange and routing key to publish messages.
         - The message content type is set to the action type.
     """
-    connection = ApexMQConnection()
+    connection = ApexMQConnectionManager()
     channel:BlockingChannel|None = None
 
     @classmethod
@@ -220,7 +220,7 @@ class ApexMQConsumerManager:
         - The callback function processes the consumed messages based on the action type.
         - The consumer uses the `consumers` dictionary to map action types to consumer classes.
     """
-    connection = ApexMQConnection()
+    connection = ApexMQConnectionManager()
 
     def __init__(self):
         """
