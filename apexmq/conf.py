@@ -118,3 +118,8 @@ class Logger:
     def error(cls, msg):
         details = cls().log(msg)
         cls.logger.error(details)
+
+    @classmethod
+    def debug(cls, msg):
+        details = cls().log(msg)
+        cls.logger.debug(details)

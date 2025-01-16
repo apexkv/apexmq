@@ -190,7 +190,7 @@ class ApexMQProducerManager:
         try:
             cls.close_channel()
             cls.close_connection()
-            Logger.info("Closed producer channel and connection.")
+            Logger.debug("Closed producer channel and connection.")
         except Exception as e:
             Logger.error(f"Error closing producer: {e}")
     
@@ -291,7 +291,7 @@ class ApexMQConsumerManager:
         for queue_name, queue_params in self.queue_params.items():
             data = queue_params.model_dump()
             self.channel.queue_declare(queue=queue_name, **data)
-            Logger.info(f"Queue declared: {queue_name}")
+            Logger.debug(f"Queue declared: {queue_name}")
 
     def callback(self, channel, method, properties, body):
         """
@@ -364,7 +364,7 @@ class ApexMQConsumerManager:
         if self.channel.is_open:
             try:
                 self.channel.stop_consuming()
-                Logger.info("Stopping consuming messages.")
+                Logger.debug("Stopping consuming messages.")
             except ChannelClosedByBroker as e:
                 Logger.error(f"Channel closed by broker: {e}")
             except Exception as e:
@@ -381,7 +381,7 @@ class ApexMQConsumerManager:
         if self.channel and self.channel.is_open:
             try:
                 self.channel.close()
-                Logger.info("Closing cosumer channel.")
+                Logger.debug("Closing cosumer channel.")
             except Exception as e:
                 Logger.error(f"Error closing cosumer channel: {e}")
 
@@ -396,7 +396,7 @@ class ApexMQConsumerManager:
         if self.connection.connection and self.connection.connection.is_open:
             try:
                 self.connection.connection.close()
-                Logger.info("Closing cosumer connection.")
+                Logger.debug("Closing cosumer connection.")
             except Exception as e:
                 Logger.error(f"Error closing cosumer connection: {e}")
 
@@ -489,4 +489,4 @@ class ApexMQManager:
         except Exception as e:
             Logger.error(f"Error closing threads: {e}")
 
-        Logger.info("Closed producer and consumer managers.")
+        Logger.debug("Closed producer and consumer managers.")

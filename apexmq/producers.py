@@ -2,7 +2,7 @@ from typing import Callable, List
 from django.db.models import Model
 from django.db.models.signals import post_save, post_delete
 
-from .connection import ApexMQProducerManager
+from .managers import ApexMQProducerManager
 
 
 def publish(
