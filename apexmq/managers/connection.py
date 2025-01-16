@@ -21,10 +21,6 @@ class ApexMQConnectionManager:
     def __init__(self):
         self.connection:BlockingConnection|None = None
         self.params = get_connection_settings()
-        self.credentials = pika.PlainCredentials(
-            self.params.user,
-            self.params.password,
-        )
 
     def connect(self):
         """
@@ -42,6 +38,11 @@ class ApexMQConnectionManager:
             Logger.info("Connection to RabbitMQ already established.")
             return
         
+        self.credentials = pika.PlainCredentials(
+            self.params.user,
+            self.params.password,
+        )
+
         retries = self.params.retries
         WAIT_TIME = 3
         while retries > 0:
