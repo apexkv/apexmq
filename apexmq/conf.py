@@ -10,7 +10,10 @@ def get_project_name()->str:
     """
     Fetches the name of the Django project from the ROOT_URLCONF setting.
     """
-    return settings.ROOT_URLCONF.split(".")[0].lower()
+    try:
+        return settings.ROOT_URLCONF.split(".")[0].lower()
+    except AttributeError:
+        return "project"
 
 
 def simplify_keys(d):
