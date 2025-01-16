@@ -102,6 +102,7 @@ class ApexMQProducerManager:
         if cls.channel and cls.channel.is_open:
             try:
                 cls.channel.close()
+                Logger.debug("Closed producer channel.")
             except Exception as e:
                 Logger.error(f"Error closing producer channel: {e}")
 
@@ -116,7 +117,8 @@ class ApexMQProducerManager:
         """
         if cls.connection.connection and cls.connection.connection.is_open:
             try:
-                cls.connection.connection.close()
+                cls.connection.close()
+                Logger.debug("Closed producer connection.")
             except Exception as e:
                 Logger.error(f"Error closing producer connection: {e}")
 

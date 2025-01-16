@@ -209,7 +209,7 @@ class ApexMQConsumerManager:
         """
         if self.connection.connection and self.connection.connection.is_open:
             try:
-                self.connection.connection.close()
+                self.connection.close()
                 Logger.debug("Closing cosumer connection.")
             except Exception as e:
                 Logger.error(f"Error closing cosumer connection: {e}")

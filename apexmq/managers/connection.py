@@ -61,3 +61,19 @@ class ApexMQConnectionManager:
 
         if retries == 0 and self.connection is None:
             raise ImproperlyConfigured("Could not establish a RabbitMQ connection after multiple retries.")
+
+    def close(self):
+        """
+        Closes the connection to RabbitMQ.
+
+        Notes:
+            - The connection is closed using the close() method of the BlockingConnection class.
+        """
+        if self.connection and self.connection.is_open:
+            try:
+                self.connection.close()
+                Logger.info("Connection to RabbitMQ closed.")
+            except Exception as e:
+                Logger.error(f"Error closing RabbitMQ connection: {e}")
+            finally:
+                self.connection = None
