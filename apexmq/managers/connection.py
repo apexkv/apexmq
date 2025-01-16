@@ -38,6 +38,10 @@ class ApexMQConnectionManager:
             - The connection parameters are fetched from the APEXMQ settings.
             - The connection is retried multiple times in case of failure.
         """
+        if self.connection and self.connection.is_open:
+            Logger.info("Connection to RabbitMQ already established.")
+            return
+        
         retries = self.params.retries
         WAIT_TIME = 3
         while retries > 0:

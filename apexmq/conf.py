@@ -12,7 +12,7 @@ def get_project_name()->str:
     """
     try:
         return settings.ROOT_URLCONF.split(".")[0].lower()
-    except AttributeError:
+    except Exception as e:
         return "project"
 
 
