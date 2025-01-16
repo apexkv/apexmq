@@ -51,7 +51,7 @@ class ApexMQConsumerManager:
             - The `consumers` dictionary maps action types to consumer classes.
         """
         self.channel:BlockingChannel|None = None
-        self.queue_params = get_connection_settings().queue
+        self.queue_params = get_connection_settings().queues
         self.consumers:Dict[str, BaseConsumer] = get_consumers_from_apps()
         atexit.register(self.close)
     

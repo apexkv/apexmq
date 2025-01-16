@@ -40,7 +40,7 @@ class ApexMQSettingsConnection(BaseModel):
     host: str = "localhost"
     port: int = 5672
     vhost: str = "/"
-    queue: Dict[str, ApexMQSettingsQueue] = {
+    queues: Dict[str, ApexMQSettingsQueue] = {
         DEFAULT_QUEUE_NAME: ApexMQSettingsQueue()
     }
     retries: int = 5
@@ -123,3 +123,4 @@ class Logger:
     def debug(cls, msg):
         details = cls().log(msg)
         cls.logger.debug(details)
+        print(details)

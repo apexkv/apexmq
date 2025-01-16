@@ -3,7 +3,7 @@ import threading, time, atexit
 from apexmq.conf import Logger
 from .producer import ApexMQProducerManager
 from .consumer import ApexMQConsumerManager
-
+from .connection import ApexMQConnectionManager
 
 
 class ApexMQManager:   
