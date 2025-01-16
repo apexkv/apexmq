@@ -49,6 +49,7 @@ APEXMQ_SETTINGS = {
             "PORT": 5672,  # optional
             "VHOST": "/",   # optional
             "RETRIES": 5,   # optional
+            "HEARTBEAT": 60, # optional
             "QUEUES": {
                 "queue_name": {
                     "DURABLE": True,  # optional
