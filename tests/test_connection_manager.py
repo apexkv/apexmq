@@ -7,10 +7,9 @@ from apexmq.managers import ApexMQConnectionManager
 
 
 class TestApexMQConnectionManager(TestCase): 
-
     @patch("apexmq.managers.connection.pika.BlockingConnection")
     def test_connect_success(self, mock_blocking_connection):
-        mock_blocking_connection.return_value = MagicMock(is_open=True)
+        mock_blocking_connection.return_value = MagicMock(is_open=False)
 
         manager = ApexMQConnectionManager()
         manager.params.retries = 1
