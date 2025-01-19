@@ -1,7 +1,7 @@
 import atexit
 from typing import Dict
 from pika.adapters.blocking_connection import BlockingChannel
-from pika.exceptions import ChannelClosedByBroker
+from pika.exceptions import AMQPConnectionError
 from django.core.exceptions import ImproperlyConfigured
 
 from apexmq.conf import Logger, get_connection_settings
@@ -62,6 +62,9 @@ class ApexMQConsumerManager:
         Raises:
             ImproperlyConfigured: If the connection could not be established.
         """
+        if not self.connection:
+            raise ImproperlyConfigured("Connection manager is not established.")
+        
         self.connection.connect()
 
     def ready(self):
@@ -89,8 +92,9 @@ class ApexMQConsumerManager:
         Raises:
             ImproperlyConfigured: If the RabbitMQ connection is not established.
         """
-        if self.connection.connection is None:
-            raise ImproperlyConfigured("RabbitMQ connection is not established.")   
+        if not self.connection.connection or not self.connection.connection.is_open:
+            raise AMQPConnectionError("RabbitMQ connection is not established.")   
+        
         self.channel = self.connection.connection.channel()
 
     def declare_queues(self):
@@ -102,6 +106,9 @@ class ApexMQConsumerManager:
             - The method declares the queue using the `queue_declare` method of the channel.
             - The method logs the declaration of each queue.
         """
+        if self.channel is None:
+            raise ImproperlyConfigured("RabbitMQ channel is not established.")
+
         for queue_name, queue_params in self.queue_params.items():
             data = queue_params.model_dump()
             self.channel.queue_declare(queue=queue_name, **data)
@@ -149,6 +156,9 @@ class ApexMQConsumerManager:
             - The method sets the `on_message_callback` to the `callback` method.
             - The method sets `auto_ack` to `True` to automatically acknowledge messages after consumption.
         """
+        if self.channel is None:
+            raise ImproperlyConfigured("RabbitMQ channel is not established.")
+
         for queue_name in self.queue_params.keys():
             self.channel.basic_consume(
                 queue=queue_name,
@@ -164,6 +174,9 @@ class ApexMQConsumerManager:
             - The method logs the start of the consuming process.
             - The method calls the `start_consuming` method of the channel to begin consuming messages.
         """
+        if self.channel is None:
+            raise AMQPConnectionError("RabbitMQ channel is not established.")
+        
         self.channel.start_consuming()
         Logger.info("Started consuming messages.")
 
@@ -175,14 +188,15 @@ class ApexMQConsumerManager:
             - The method logs the stop of the consuming process.
             - The method calls the `stop_consuming` method of the channel to stop consuming messages.
         """
-        if self.channel.is_open:
-            try:
-                self.channel.stop_consuming()
-                Logger.debug("Stopping consuming messages.")
-            except ChannelClosedByBroker as e:
-                Logger.error(f"Channel closed by broker: {e}")
-            except Exception as e:
-                Logger.error(f"Error stopping consuming: {e}")
+        if self.channel is None:
+            raise AMQPConnectionError("RabbitMQ channel is not established.")
+        
+        try:
+            self.channel.stop_consuming()
+            Logger.debug("Stopping consuming messages.")
+        except Exception as e:
+            Logger.error(f"Error stopping consuming: {e}")
+            raise e
 
     def close_channel(self):
         """
@@ -192,12 +206,15 @@ class ApexMQConsumerManager:
             - The method logs the closing of the channel.
             - The method calls the `close` method of the channel to close the channel.
         """
-        if self.channel and self.channel.is_open:
-            try:
-                self.channel.close()
-                Logger.debug("Closing cosumer channel.")
-            except Exception as e:
-                Logger.error(f"Error closing cosumer channel: {e}")
+        if not self.channel or not self.channel.is_open:
+            raise AMQPConnectionError("Consumer channel is already closed.")
+        
+        try:
+            self.channel.close()
+            Logger.debug("Closing cosumer channel.")
+        except Exception as e:
+            Logger.error(f"Error closing cosumer channel: {e}")
+            raise e
 
     def close_connection(self):
         """
@@ -207,12 +224,12 @@ class ApexMQConsumerManager:
             - The method logs the closing of the connection.
             - The method calls the `close` method of the connection to close the connection.
         """
-        if self.connection.connection and self.connection.connection.is_open:
-            try:
-                self.connection.close()
-                Logger.debug("Closing cosumer connection.")
-            except Exception as e:
-                Logger.error(f"Error closing cosumer connection: {e}")
+        try:
+            self.connection.close()
+            Logger.debug("Closing cosumer connection.")
+        except Exception as e:
+            Logger.error(f"Error closing cosumer connection: {e}")
+            raise e
 
     def close(self):
         """
@@ -221,6 +238,11 @@ class ApexMQConsumerManager:
         Notes:
             - The method calls the `close_channel` and `close_connection` methods to close the channel and connection.
         """
-        self.stop_consuming()
-        self.close_channel()
-        self.close_connection()
+        try:
+            self.stop_consuming()
+            self.close_channel()
+            self.close_connection()
+            Logger.debug("Closed consumer channel and connection.")
+        except Exception as e:
+            Logger.error(f"Error closing consumer: {e}")
+            raise e
