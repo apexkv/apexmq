@@ -1,7 +1,6 @@
 from unittest import TestCase
 from unittest.mock import patch, MagicMock
 from pika.exceptions import AMQPConnectionError
-from pika.adapters.blocking_connection import BlockingChannel
 from django.core.exceptions import ImproperlyConfigured
 from apexmq.managers import ApexMQProducerManager
 
