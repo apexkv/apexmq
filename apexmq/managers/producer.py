@@ -1,5 +1,6 @@
 import json, atexit, pika
 from pika.adapters.blocking_connection import BlockingChannel
+from pika.exceptions import AMQPConnectionError
 from django.core.exceptions import ImproperlyConfigured
 
 from .connection import ApexMQConnectionManager
@@ -36,6 +37,9 @@ class ApexMQProducerManager:
         Raises:
             ImproperlyConfigured: If the connection could not be established.
         """
+        if not cls.connection:
+            raise ImproperlyConfigured("Connection manager is not established.")
+        
         cls.connection.connect()
 
     @classmethod
@@ -56,9 +60,13 @@ class ApexMQProducerManager:
 
         Raises:
             ImproperlyConfigured: If the RabbitMQ connection is not established.
+            AMQPConnectionError: If the RabbitMQ connection is not open.
         """
-        if cls.connection.connection is None:
+        if not cls.connection.connection:
             raise ImproperlyConfigured("RabbitMQ connection is not established.")   
+        
+        if not cls.connection.connection.is_open:
+            raise AMQPConnectionError("RabbitMQ connection is not open.")
         
         cls.channel = cls.connection.connection.channel()
 
@@ -78,7 +86,12 @@ class ApexMQProducerManager:
         Notes:
             - The message is published using the `basic_publish` method of the channel.
             - The message content type is set to the action type.
-        """  
+        """
+        if not cls.connection.connection:
+            raise ImproperlyConfigured("RabbitMQ connection is not established.")
+        
+        if not cls.channel:
+            raise ImproperlyConfigured("RabbitMQ channel is not established.")
         try:
             cls.channel.basic_publish(
                 exchange="",
@@ -105,6 +118,10 @@ class ApexMQProducerManager:
                 Logger.debug("Closed producer channel.")
             except Exception as e:
                 Logger.error(f"Error closing producer channel: {e}")
+                raise e
+        else:
+            Logger.debug("Producer channel is already closed.")
+            raise Exception("Producer channel is already closed.")
 
     @classmethod
     def close_connection(cls):
@@ -121,6 +138,10 @@ class ApexMQProducerManager:
                 Logger.debug("Closed producer connection.")
             except Exception as e:
                 Logger.error(f"Error closing producer connection: {e}")
+                raise e
+        else:
+            Logger.debug("Producer connection is already closed.")
+            raise Exception("Producer connection is already closed.")
 
     @classmethod
     def close(cls):
