@@ -115,20 +115,29 @@ class TestApexMQConsumerManager(TestCase):
 
         self.manager.channel.close.assert_called_once()
 
-    def test_close_failure_when_channel_is_none(self):
+    @patch("apexmq.managers.consumer.Logger")
+    def test_close_failure_when_channel_is_none(self, mock_logger):
         self.manager.channel = None
 
-        with self.assertRaises(AMQPConnectionError) as context:
-            self.manager.close()
+        self.manager.close()
 
         self.assertIsNone(self.manager.channel)
-        self.assertEqual(str(context.exception), "RabbitMQ channel is not established.")
+        mock_logger.error.assert_any_call("RabbitMQ channel is not established.")      
 
-    def test_close_failure_when_channel_is_closed(self):
+    @patch("apexmq.managers.consumer.Logger")
+    def test_close_failure_when_channel_is_closed(self, mock_logger):
         self.manager.channel = MagicMock(is_open=False)
 
-        with self.assertRaises(AMQPConnectionError) as context:
-            self.manager.close()
+        self.manager.close()
 
         self.assertFalse(self.manager.channel.is_open)
-        self.assertEqual(str(context.exception), "Consumer channel is already closed.")
+        mock_logger.error.assert_any_call("RabbitMQ channel is not established.")
+
+    @patch("apexmq.managers.consumer.Logger")
+    def test_close_failure_when_connection_is_none(self, mock_logger):
+        self.manager.connection = None
+
+        self.manager.close()
+
+        self.assertIsNone(self.manager.connection)
+        mock_logger.error.assert_any_call("Consumer connection is already closed.")

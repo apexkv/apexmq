@@ -188,7 +188,8 @@ class ApexMQConsumerManager:
             - The method logs the stop of the consuming process.
             - The method calls the `stop_consuming` method of the channel to stop consuming messages.
         """
-        if self.channel is None:
+        if not self.channel or not self.channel.is_open:
+            Logger.error("RabbitMQ channel is not established.")
             raise AMQPConnectionError("RabbitMQ channel is not established.")
         
         try:
@@ -222,6 +223,9 @@ class ApexMQConsumerManager:
             - The method logs the closing of the connection.
             - The method calls the `close` method of the connection to close the connection.
         """
+        if not self.connection or not self.connection.connection.is_open:
+            Logger.error("Consumer connection is already closed.")
+            raise AMQPConnectionError("Consumer connection is already closed.")
         try:
             self.connection.close()
             Logger.debug("Closing cosumer connection.")
