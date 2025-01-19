@@ -196,7 +196,6 @@ class ApexMQConsumerManager:
             Logger.debug("Stopping consuming messages.")
         except Exception as e:
             Logger.error(f"Error stopping consuming: {e}")
-            raise e
 
     def close_channel(self):
         """
@@ -214,7 +213,6 @@ class ApexMQConsumerManager:
             Logger.debug("Closing cosumer channel.")
         except Exception as e:
             Logger.error(f"Error closing cosumer channel: {e}")
-            raise e
 
     def close_connection(self):
         """
@@ -229,7 +227,6 @@ class ApexMQConsumerManager:
             Logger.debug("Closing cosumer connection.")
         except Exception as e:
             Logger.error(f"Error closing cosumer connection: {e}")
-            raise e
 
     def close(self):
         """
@@ -245,4 +242,3 @@ class ApexMQConsumerManager:
             Logger.debug("Closed consumer channel and connection.")
         except Exception as e:
             Logger.error(f"Error closing consumer: {e}")
-            raise e
