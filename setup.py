@@ -2,8 +2,8 @@ from setuptools import setup, find_packages
 
 setup(
     name="apexmq",
-    version="1.0.8",
-    description="A developer-friendly library for integrating RabbitMQ with Django applications.",
+    version="1.1.0",
+    description="A developer-friendly library for integrating RabbitMQ with Django applications, enabling seamless message queuing, automated consumer registration, and simplified communication between microservices. ApexMQ is designed to streamline asynchronous messaging for Django projects, allowing developers to focus on business logic rather than managing connections and queues.",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     author="Kavindu Harshitha",
