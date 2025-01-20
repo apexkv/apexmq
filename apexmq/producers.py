@@ -16,10 +16,7 @@ def publish(
     Args:
         action (str): The action identifier for the message being published.
         body (dict): The data to be sent in the message.
-        to (List[str] | Literal["broadcast"]): A list of queue names or "broadcast" where the message will be sent.
-        channel_name (str, optional): The name of the channel through which the message
-                                      will be published. Defaults to the first channel name
-                                      configured in the system.
+        to List[str]: A list of queue names where the message will be sent.
     Functionality:
         - The function gets the channel manager for the specified channel name.
         - The function publishes the message to the specified queue(s) using the
@@ -29,9 +26,6 @@ def publish(
         publish("user.create", {"id": 1, "name": "John Doe"}, ["queue1", "queue2"])
         - This will send a message with the action "user.create" and the body
           {"id": 1, "name": "John Doe"} to the "queue1" and "queue2" queues.
-        publish("user.create", {"id": 1, "name": "John Doe"}, "broadcast")
-        - This will broadcast a message with the action "user.create" and the body
-          {"id": 1, "name": "John Doe"} to all queues in the connection.
     """
     for publish_to in to:
         ApexMQProducerManager.publish(action, body, publish_to)
